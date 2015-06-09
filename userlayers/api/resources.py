@@ -8,6 +8,7 @@ from mutant.models import ModelDefinition, FieldDefinition
 FIELD_TYPES = (
     ('text', mutant.contrib.text.models.TextFieldDefinition),
     ('integer', mutant.contrib.numeric.models.BigIntegerFieldDefinition),
+    ('boolean', mutant.contrib.boolean.models.NullBooleanFieldDefinition),
 )
 
 class FieldsResource(ModelResource):
