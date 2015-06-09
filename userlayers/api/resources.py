@@ -19,8 +19,8 @@ class FieldsResource(ModelResource):
         authorization = DjangoAuthorization()
         fields = ['name']
     
-    def build_bundle(self, *args, **kwargs):
-        bundle = super(FieldsResource, self).build_bundle(*args, **kwargs)
+    def hydrate(self, bundle):
+        bundle = super(FieldsResource, self).hydrate(bundle)
         model = dict(FIELD_TYPES)[bundle.data['type']]
         if not isinstance(bundle.obj, model):
             self._meta.object_class = model
