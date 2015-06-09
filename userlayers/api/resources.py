@@ -18,7 +18,7 @@ class FieldsResource(ModelResource):
     
     class Meta:
         queryset = FieldDefinition.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = Authorization()
         fields = ['name']
     
     def hydrate(self, bundle):
@@ -39,7 +39,7 @@ class TablesResource(ModelResource):
     
     class Meta:
         queryset = ModelDefinition.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = Authorization()
         fields = ['name']
         
     def hydrate(self, bundle):
