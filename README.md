@@ -46,7 +46,7 @@ Location: http://localhost:8000/userlayers/api/v1/tables/36/
 
 Row creation for table "foo":
 ```
-curl --dump-header - -H "Content-Type: application/json" -X POST --data '{"display_name": "somename", "value": 99, "is_ok": false}' http://localhost:8000/userlayers/api/v1/tablesdata/36/data/ 
+curl --dump-header - -H "Content-Type: application/json" -X POST --data '{"display_name": "foo", "value": 99, "is_ok": false, "geometry": {"type":"Polygon", "coordinates":[[[37.44, 55.65], [37.60, 55.96], [37.80, 55.66], [37.44, 55.65]]]}}' http://localhost:8000/userlayers/api/v1/tablesdata/36/data/ 
 ```
 
 Response:
@@ -67,5 +67,5 @@ curl -H "Content-Type: application/json" http://localhost:8000/userlayers/api/v1
 
 Result:
 ```
-{"meta": {"limit": 20, "next": null, "offset": 0, "previous": null, "total_count": 2}, "objects": [{"display_name": "somename", "id": 1, "is_ok": false, "resource_uri": "/userlayers/api/v1/tablesdata/36/data/1/", "value": "99"}]}
+{"meta": {"limit": 20, "next": null, "offset": 0, "previous": null, "total_count": 1}, "objects": [{"display_name": "foo", "geometry": {"coordinates": [[[37.44, 55.65], [37.6, 55.96], [37.8, 55.66], [37.44, 55.65]]], "type": "Polygon"}, "id": 1, "is_ok": false, "resource_uri": "/userlayers/api/v1/tablesdata/36/data/1/", "value": "99"}]}
 ```
