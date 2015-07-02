@@ -4,6 +4,7 @@ from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from tastypie.resources import ModelResource, Resource
 from tastypie import fields, http
+from tastypie.bundle import Bundle
 from tastypie.authorization import DjangoAuthorization, Authorization
 from tastypie.utils import trailing_slash
 from mutant.models import ModelDefinition, FieldDefinition
@@ -52,6 +53,11 @@ class TablesResource(ModelResource):
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
+        
+        # add geo field
+        obj = mutant.contrib.geo.models.GeometryFieldDefinition(name='geometry', model_def = bundle.obj)
+        bundle.data['fields'].append(Bundle(obj=obj))
+        
         return super(TablesResource, self).save_m2m(bundle)
 
 class TableProxyResource(Resource):
