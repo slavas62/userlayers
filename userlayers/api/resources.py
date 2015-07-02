@@ -2,7 +2,8 @@ import mutant
 
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
-from tastypie.resources import ModelResource, Resource
+from tastypie.resources import Resource
+from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
 from tastypie.bundle import Bundle
 from tastypie.authorization import DjangoAuthorization, Authorization
@@ -55,7 +56,8 @@ class TablesResource(ModelResource):
             f.obj.model_def = bundle.obj
         
         # add geo field
-        obj = mutant.contrib.geo.models.GeometryFieldDefinition(name='geometry', model_def = bundle.obj)
+        Model = mutant.contrib.geo.models.GeometryFieldDefinition
+        obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
         bundle.data['fields'].append(Bundle(obj=obj))
         
         return super(TablesResource, self).save_m2m(bundle)
