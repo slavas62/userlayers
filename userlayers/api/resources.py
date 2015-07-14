@@ -33,9 +33,13 @@ class FieldsResource(ModelResource):
         return bundle
         
     def dehydrate(self, bundle):
-        bundle.data['type'] = bundle.obj.content_type.name
+        cls = bundle.obj.content_type.model_class()
+        if cls == mutant.contrib.geo.models.GeometryFieldDefinition:
+            f_type = 'geometry'
+        else:
+            f_type = dict((v,k) for k,v in FIELD_TYPES)[cls]
+        bundle.data['type'] = f_type
         return bundle
-    
 
 class TablesResource(ModelResource):
     fields = fields.ToManyField(FieldsResource, 'fielddefinitions', full=True)
