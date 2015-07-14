@@ -9,6 +9,7 @@ from tastypie.bundle import Bundle
 from tastypie.authorization import DjangoAuthorization, Authorization
 from tastypie.utils import trailing_slash
 from mutant.models import ModelDefinition, FieldDefinition
+from .validators import TableValidation
 
 FIELD_TYPES = (
     ('text', mutant.contrib.text.models.TextFieldDefinition),
@@ -46,6 +47,7 @@ class TablesResource(ModelResource):
     
     class Meta:
         queryset = ModelDefinition.objects.all()
+        validation = TableValidation()
         authorization = Authorization()
         fields = ['name']
         
