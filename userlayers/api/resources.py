@@ -9,6 +9,7 @@ from tastypie.bundle import Bundle
 from tastypie.authorization import DjangoAuthorization, Authorization
 from tastypie.utils import trailing_slash
 from mutant.models import ModelDefinition, FieldDefinition
+from userlayers.signals import table_created
 from .validators import TableValidation
 
 FIELD_TYPES = (
@@ -57,6 +58,18 @@ class TablesResource(ModelResource):
         bundle.obj.object_name = bundle.data['name']
         return super(TablesResource, self).hydrate(bundle)
 
+    def emit_created_signal(self, bundle):
+        uri = self.get_resource_uri(bundle.obj)
+        proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
+        table_created.send(sender='api', md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
+
+    def save(self, bundle, *args, **kwargs):
+        created = not bool(bundle.obj.pk)
+        bundle = super(TablesResource, self).save(bundle, *args, **kwargs)
+        if created:
+            self.emit_created_signal(bundle)
+        return bundle
+    
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
