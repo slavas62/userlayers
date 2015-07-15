@@ -11,6 +11,7 @@ from tastypie.utils import trailing_slash
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created
 from .validators import TableValidation
+from .serializers import GeoJsonSerializer
 
 FIELD_TYPES = (
     ('text', mutant.contrib.text.models.TextFieldDefinition),
@@ -106,6 +107,7 @@ class TableProxyResource(Resource):
             class Meta:
                 queryset = md.model_class().objects.all()
                 authorization = Authorization()
+                serializer = GeoJsonSerializer()
         
             def get_resource_uri(self, bundle_or_obj=None, **kwargs):
                 url = proxy.get_resource_uri()
@@ -113,6 +115,11 @@ class TableProxyResource(Resource):
                     kw = self.resource_uri_kwargs(bundle_or_obj)
                     url += '%s%s' % (kw['pk'], trailing_slash())
                 return url
+        
+            def serialize(self, request, data, format, options=None):
+                options = options or {}
+                options['geojson'] = True
+                return super(R, self).serialize(request, data, format, options)
         
         return R().dispatch(request_type, request, **kwargs)
     
