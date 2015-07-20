@@ -1,17 +1,24 @@
+import os
 import mutant
 
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
+from django.http.response import HttpResponse
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
 from tastypie.bundle import Bundle
 from tastypie.authorization import DjangoAuthorization, Authorization
 from tastypie.utils import trailing_slash
+from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created
+from vectortools.fsutils import TempDir
+from vectortools.geojson import convert_to_geojson_data
+from vectortools.reader import VectorReaderError
 from .validators import TableValidation
 from .serializers import GeoJsonSerializer
+from .forms import TableFromFileForm
 
 FIELD_TYPES = (
     ('text', mutant.contrib.text.models.TextFieldDefinition),
@@ -131,3 +138,47 @@ class TableProxyResource(Resource):
             url(r"%s%s$" % (self.pattern, trailing_slash()), self.wrap_view('dispatch_list'), name="api_dispatch_list"),
             url(r"%s/(?P<%s>.*?)%s$" % (self.pattern, self._meta.detail_uri_name, trailing_slash()), self.wrap_view('dispatch_detail'), name="api_dispatch_detail"),
         ]
+
+class FileImportError(Exception):
+    pass
+
+class FileImportResource(Resource):
+    file = fields.FileField()
+    
+    class Meta:
+        list_allowed_methods = ['post']
+        detail_allowed_methods = []
+
+    def create_table(self, name, geojson_data):
+        if not len(geojson_data[0]['features']):
+            raise FileImportError(u'file does not contain any features')
+        tr = TablesResource()
+        props = geojson_data[0]['features'][0]['properties']
+        fields = []
+        for k, v in props.iteritems():
+            fields.append({'name': k, 'type': 'text',})
+        bundle = tr.build_bundle(data=dict(name=name, fields=fields))
+        return tr.obj_create(bundle)
+
+    def process_file(self, name, uploaded_file):
+        tmp_dir = TempDir()
+        dst_file = open(os.path.join(tmp_dir.path, uploaded_file.name), 'w')
+        for c in uploaded_file.chunks():
+            dst_file.write(c)
+        dst_file.close()
+        try:
+            geojson_data = convert_to_geojson_data(dst_file.name)
+        except VectorReaderError:
+            raise FileImportError(u'wrong file format')
+        return self.create_table(name, geojson_data)
+
+    def post_list(self, request, **kwargs):
+        form = TableFromFileForm(request.POST, request.FILES)
+        if not form.is_valid():
+            raise ImmediateHttpResponse(response=self.error_response(request, form.errors))
+        try:
+            data = self.process_file(form.cleaned_data['name'], form.cleaned_data['file'])
+        except FileImportError as e:
+            raise ImmediateHttpResponse(response=self.error_response(request, {'file': [e.message]}))
+        return HttpResponse()
+        
