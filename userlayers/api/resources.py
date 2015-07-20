@@ -1,9 +1,11 @@
 import os
+import json
 import mutant
 
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.http.response import HttpResponse
+from django.contrib.gis.geos import GEOSGeometry
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
@@ -40,6 +42,8 @@ class FieldsResource(ModelResource):
         if not isinstance(bundle.obj, model):
             self._meta.object_class = model
             bundle.obj = model()
+        bundle.obj.null = True
+        bundle.obj.blank = True
         return bundle
         
     def dehydrate(self, bundle):
@@ -160,6 +164,14 @@ class FileImportResource(Resource):
         bundle = tr.build_bundle(data=dict(name=name, fields=fields))
         return tr.obj_create(bundle)
 
+    def fill_table(self, model_class, geojson_data):
+        objects = []
+        for f in geojson_data[0]['features']:
+            obj = model_class(**f['properties'])
+            obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
+            objects.append(obj)
+        model_class.objects.bulk_create(objects)
+
     def process_file(self, name, uploaded_file):
         tmp_dir = TempDir()
         dst_file = open(os.path.join(tmp_dir.path, uploaded_file.name), 'w')
@@ -170,7 +182,9 @@ class FileImportResource(Resource):
             geojson_data = convert_to_geojson_data(dst_file.name)
         except VectorReaderError:
             raise FileImportError(u'wrong file format')
-        return self.create_table(name, geojson_data)
+        bundle = self.create_table(name, geojson_data)
+        self.fill_table(bundle.obj.model_ct.model_class(), geojson_data)
+        return bundle
 
     def post_list(self, request, **kwargs):
         form = TableFromFileForm(request.POST, request.FILES)
