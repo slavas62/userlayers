@@ -7,6 +7,7 @@ setup(
     long_description=open('README.md').read(),
     install_requires=[
         'django-mutant == 0.1.2',
+        'django-polymodels==1.2.3',
         'django-tastypie >= 0.12.0',
         'vectortools == 0.0.1',
     ],
