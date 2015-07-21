@@ -6,6 +6,7 @@ from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.http.response import HttpResponse
 from django.contrib.gis.geos import GEOSGeometry
+from django.db import transaction
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
@@ -20,13 +21,7 @@ from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
 from .validators import TableValidation
 from .serializers import GeoJsonSerializer
-from .forms import TableFromFileForm
-
-FIELD_TYPES = (
-    ('text', mutant.contrib.text.models.TextFieldDefinition),
-    ('integer', mutant.contrib.numeric.models.BigIntegerFieldDefinition),
-    ('boolean', mutant.contrib.boolean.models.NullBooleanFieldDefinition),
-)
+from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
 
 class FieldsResource(ModelResource):
     type = fields.ApiField()
@@ -38,6 +33,10 @@ class FieldsResource(ModelResource):
     
     def hydrate(self, bundle):
         bundle = super(FieldsResource, self).hydrate(bundle)
+        form = FieldForm(bundle.data)
+        if not form.is_valid():
+            raise ImmediateHttpResponse(response=self.error_response(bundle.request, form.errors))
+        bundle.data = form.cleaned_data
         model = dict(FIELD_TYPES)[bundle.data['type']]
         if not isinstance(bundle.obj, model):
             self._meta.object_class = model
@@ -75,6 +74,7 @@ class TablesResource(ModelResource):
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
         table_created.send(sender='api', md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
 
+    @transaction.atomic
     def save(self, bundle, *args, **kwargs):
         created = not bool(bundle.obj.pk)
         bundle = super(TablesResource, self).save(bundle, *args, **kwargs)
