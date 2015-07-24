@@ -11,16 +11,18 @@ from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
 from tastypie.bundle import Bundle
-from tastypie.authorization import DjangoAuthorization, Authorization
+from tastypie.authorization import Authorization
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created
+from userlayers.models import UserToTable
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
 from .validators import TableValidation
 from .serializers import GeoJsonSerializer
+from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
 
 class FieldsResource(ModelResource):
@@ -28,7 +30,7 @@ class FieldsResource(ModelResource):
     
     class Meta:
         queryset = FieldDefinition.objects.all()
-        authorization = Authorization()
+        authorization = FieldAuthorization()
         fields = ['name']
     
     def hydrate(self, bundle):
@@ -60,7 +62,7 @@ class TablesResource(ModelResource):
     class Meta:
         queryset = ModelDefinition.objects.all()
         validation = TableValidation()
-        authorization = Authorization()
+        authorization = TableAuthorization()
         fields = ['name']
         
     def hydrate(self, bundle):
@@ -75,13 +77,12 @@ class TablesResource(ModelResource):
         table_created.send(sender='api', md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
 
     @transaction.atomic
-    def save(self, bundle, *args, **kwargs):
-        created = not bool(bundle.obj.pk)
-        bundle = super(TablesResource, self).save(bundle, *args, **kwargs)
-        if created:
-            self.emit_created_signal(bundle)
+    def obj_create(self, bundle, **kwargs):
+        bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
+        UserToTable(md=bundle.obj, user=bundle.request.user).save()
+        self.emit_created_signal(bundle)
         return bundle
-    
+
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
@@ -98,6 +99,7 @@ class TableProxyResource(Resource):
     
     class Meta:
         resource_name = 'tablesdata'
+        authorization = FullAccessForLoginedUsers()
     
     def uri_for_table(self, table_pk):
         return reverse('api_dispatch_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name))
@@ -108,8 +110,8 @@ class TableProxyResource(Resource):
     def dispatch(self, request_type, request, **kwargs):
         self.table_pk = kwargs.pop('table_pk')
         try:
-            md = ModelDefinition.objects.get(pk=self.table_pk)
-        except ModelDefinition.DoesNotExist:
+            md = UserToTable.objects.get(md__pk=self.table_pk, user=request.user).md
+        except UserToTable.DoesNotExist:
             return http.HttpNotFound()
         
         proxy = self
@@ -152,8 +154,9 @@ class FileImportResource(Resource):
     class Meta:
         list_allowed_methods = ['post']
         detail_allowed_methods = []
+        authorization = FullAccessForLoginedUsers()
 
-    def create_table(self, name, geojson_data):
+    def create_table(self, request, name, geojson_data):
         if not len(geojson_data[0]['features']):
             raise FileImportError(u'file does not contain any features')
         tr = TablesResource()
@@ -161,7 +164,7 @@ class FileImportResource(Resource):
         fields = []
         for k, v in props.iteritems():
             fields.append({'name': k, 'type': 'text',})
-        bundle = tr.build_bundle(data=dict(name=name, fields=fields))
+        bundle = tr.build_bundle(request=request, data=dict(name=name, fields=fields))
         return tr.obj_create(bundle)
 
     def fill_table(self, model_class, geojson_data):
@@ -172,7 +175,7 @@ class FileImportResource(Resource):
             objects.append(obj)
         model_class.objects.bulk_create(objects)
 
-    def process_file(self, name, uploaded_file):
+    def process_file(self, request, name, uploaded_file):
         tmp_dir = TempDir()
         dst_file = open(os.path.join(tmp_dir.path, uploaded_file.name), 'w')
         for c in uploaded_file.chunks():
@@ -182,7 +185,7 @@ class FileImportResource(Resource):
             geojson_data = convert_to_geojson_data(dst_file.name)
         except VectorReaderError:
             raise FileImportError(u'wrong file format')
-        bundle = self.create_table(name, geojson_data)
+        bundle = self.create_table(request, name, geojson_data)
         self.fill_table(bundle.obj.model_ct.model_class(), geojson_data)
         return bundle
 
@@ -191,7 +194,7 @@ class FileImportResource(Resource):
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(request, form.errors))
         try:
-            data = self.process_file(form.cleaned_data['name'], form.cleaned_data['file'])
+            data = self.process_file(request, form.cleaned_data['name'], form.cleaned_data['file'])
         except FileImportError as e:
             raise ImmediateHttpResponse(response=self.error_response(request, {'file': [e.message]}))
         return HttpResponse()
