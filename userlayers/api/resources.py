@@ -194,8 +194,9 @@ class FileImportResource(Resource):
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(request, form.errors))
         try:
-            data = self.process_file(request, form.cleaned_data['name'], form.cleaned_data['file'])
+            bundle = self.process_file(request, form.cleaned_data['name'], form.cleaned_data['file'])
         except FileImportError as e:
             raise ImmediateHttpResponse(response=self.error_response(request, {'file': [e.message]}))
-        return HttpResponse()
+        location = TablesResource().get_resource_uri(bundle)
+        return self.create_response(response_class=http.HttpCreated, location=location)
         
