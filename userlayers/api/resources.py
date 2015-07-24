@@ -198,5 +198,5 @@ class FileImportResource(Resource):
         except FileImportError as e:
             raise ImmediateHttpResponse(response=self.error_response(request, {'file': [e.message]}))
         location = TablesResource().get_resource_uri(bundle)
-        return self.create_response(response_class=http.HttpCreated, location=location)
+        return http.HttpCreated(location=location)
         
