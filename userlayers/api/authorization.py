@@ -2,7 +2,7 @@ from userlayers.models import UserToTable
 
 class FullAccessForLoginedUsers(object):
     def base_check(self, object_list, bundle):
-        return hasattr(bundle.request, 'user')
+        return hasattr(bundle.request, 'user') and not bundle.request.user.is_anonymous()
     
     def check_list(self, object_list, bundle):
         return object_list if self.base_check(object_list, bundle) else []
@@ -44,7 +44,10 @@ class TableAuthorization(FullAccessForLoginedUsers):
         return self.filter_for_user(object_list, bundle.request.user)
   
     def check_detail(self, object_list, bundle):
-        return bool(self.check_list(object_list, bundle))
+        return bundle.obj in self.check_list(object_list, bundle)
+    
+    def create_detail(self, object_list, bundle):
+        return self.base_check(object_list, bundle)
 
 class FieldAuthorization(TableAuthorization):
     def filter_for_user(self, object_list, user):
