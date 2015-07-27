@@ -74,7 +74,7 @@ class TablesResource(ModelResource):
     def emit_created_signal(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
-        table_created.send(sender='api', md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
+        table_created.send(sender='api', user=bundle.request.user, md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
 
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
