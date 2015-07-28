@@ -25,7 +25,7 @@ from .validators import TableValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
-from .naming import get_app_label_for_user, get_db_table_name
+from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name
 
 get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
@@ -71,14 +71,16 @@ class TablesResource(ModelResource):
         fields = ['name']
     
     def fill_obj(self, bundle):
+        bundle.obj.verbose_name = bundle.data['name']
         bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
         bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
-        bundle.obj.model = bundle.data['name'][:100]
-        bundle.obj.object_name = bundle.data['name'][:255]
+        bundle.obj.model = translit_and_slugify(bundle.data['name'])[:100]
+        bundle.obj.object_name = translit_and_slugify(bundle.data['name'])[:255]
         
     def hydrate(self, bundle):
         bundle = super(TablesResource, self).hydrate(bundle)
         self.fill_obj(bundle)
+        bundle.data['name'] = translit_and_slugify(bundle.data['name'])[:100]
         return bundle
 
     def emit_created_signal(self, bundle):
