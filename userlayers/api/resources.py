@@ -40,6 +40,8 @@ class FieldsResource(ModelResource):
     
     def hydrate(self, bundle):
         bundle = super(FieldsResource, self).hydrate(bundle)
+        verbose_name = bundle.data['name']
+        bundle.data['name'] = translit_and_slugify(bundle.data['name'])
         form = FieldForm(bundle.data)
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(bundle.request, form.errors))
@@ -50,6 +52,7 @@ class FieldsResource(ModelResource):
             bundle.obj = model()
         bundle.obj.null = True
         bundle.obj.blank = True
+        bundle.obj.verbose_name = verbose_name
         return bundle
         
     def dehydrate(self, bundle):
