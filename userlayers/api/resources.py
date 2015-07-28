@@ -2,6 +2,7 @@ import os
 import json
 import mutant
 
+from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.http.response import HttpResponse
@@ -24,6 +25,10 @@ from .validators import TableValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
+from .naming import get_app_label_for_user, get_db_table_name
+
+get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
+get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
 
 class FieldsResource(ModelResource):
     type = fields.ApiField()
@@ -64,12 +69,17 @@ class TablesResource(ModelResource):
         validation = TableValidation()
         authorization = TableAuthorization()
         fields = ['name']
+    
+    def fill_obj(self, bundle):
+        bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
+        bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
+        bundle.obj.model = bundle.data['name'][:100]
+        bundle.obj.object_name = bundle.data['name'][:255]
         
     def hydrate(self, bundle):
-        bundle.obj.app_label = 'dynamic'
-        bundle.obj.model = bundle.data['name']
-        bundle.obj.object_name = bundle.data['name']
-        return super(TablesResource, self).hydrate(bundle)
+        bundle = super(TablesResource, self).hydrate(bundle)
+        self.fill_obj(bundle)
+        return bundle
 
     def emit_created_signal(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
