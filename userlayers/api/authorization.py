@@ -36,6 +36,8 @@ class FullAccessForLoginedUsers(object):
 
 class TableAuthorization(FullAccessForLoginedUsers):
     def filter_for_user(self, object_list, user):
+        if user.is_superuser:
+            return object_list
         return object_list.filter(usertotable__in=UserToTable.objects.filter(user=user))
   
     def check_list(self, object_list, bundle):
