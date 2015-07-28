@@ -109,8 +109,14 @@ class TableProxyResource(Resource):
     
     def dispatch(self, request_type, request, **kwargs):
         self.table_pk = kwargs.pop('table_pk')
+        user = getattr(request, 'user', None)
+        if not user or user.is_anonymous():
+            return http.HttpNotFound()
+        lookup = dict(md__pk=self.table_pk)
+        if not user.is_superuser:
+            lookup['user'] = user
         try:
-            md = UserToTable.objects.get(md__pk=self.table_pk, user=request.user).md
+            md = UserToTable.objects.get(**lookup).md
         except UserToTable.DoesNotExist:
             return http.HttpNotFound()
         
