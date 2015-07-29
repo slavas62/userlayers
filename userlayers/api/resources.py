@@ -1,6 +1,7 @@
 import os
 import json
 import mutant
+import logging
 
 from django.conf import settings
 from django.conf.urls import url
@@ -29,6 +30,8 @@ from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_n
 
 get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
+
+logger = logging.getLogger('userlayers.api.schema')
 
 class FieldsResource(ModelResource):
     type = fields.ApiField()
@@ -96,7 +99,17 @@ class TablesResource(ModelResource):
         bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
         UserToTable(md=bundle.obj, user=bundle.request.user).save()
         self.emit_created_signal(bundle)
+        logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
+
+    def obj_update(self, *args, **kwargs):
+        bundle = super(TablesResource, self).obj_update(*args, **kwargs)
+        logger.info('"%s" updated table "%s"' % (bundle.request.user, bundle.obj.db_table))
+        return bundle
+
+    def obj_delete(self, bundle, **kwargs):
+        super(TablesResource, self).obj_delete(bundle, **kwargs)
+        logger.info('"%s" removed table "%s"' % (bundle.request.user, bundle.obj.db_table))
 
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
@@ -138,6 +151,8 @@ class TableProxyResource(Resource):
         proxy = self
         
         class R(ModelResource):
+            logger = logging.getLogger('userlayers.api.data')
+            
             class Meta:
                 queryset = md.model_class().objects.all()
                 authorization = Authorization()
@@ -154,6 +169,20 @@ class TableProxyResource(Resource):
                 options = options or {}
                 options['geojson'] = True
                 return super(R, self).serialize(request, data, format, options)
+            
+            def obj_create(self, bundle, **kwargs):
+                bundle = super(R, self).obj_create(bundle, **kwargs)
+                self.logger.info('"%s" created table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
+                return bundle
+            
+            def obj_update(self, bundle, **kwargs):
+                bundle = super(R, self).obj_update(bundle, **kwargs)
+                self.logger.info('"%s" updated table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
+                return bundle
+            
+            def obj_delete(self, bundle, **kwargs):
+                super(R, self).obj_delete(bundle, **kwargs)
+                self.logger.info('"%s" deleted table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
         
         return R().dispatch(request_type, request, **kwargs)
     
