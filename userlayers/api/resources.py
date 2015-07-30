@@ -26,7 +26,7 @@ from .validators import TableValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
-from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name
+from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
 
 get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
@@ -44,7 +44,7 @@ class FieldsResource(ModelResource):
     def hydrate(self, bundle):
         bundle = super(FieldsResource, self).hydrate(bundle)
         verbose_name = bundle.data['name']
-        bundle.data['name'] = translit_and_slugify(bundle.data['name'])
+        bundle.data['name'] = normalize_field_name(bundle.data['name'])
         form = FieldForm(bundle.data)
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(bundle.request, form.errors))
@@ -220,6 +220,10 @@ class FileImportResource(Resource):
     def fill_table(self, model_class, geojson_data):
         objects = []
         for f in geojson_data[0]['features']:
+            for k, v in f['properties'].iteritems():
+                if normalize_field_name(k) != k:
+                    f['properties'][normalize_field_name(k)] = v
+                    f['properties'].pop(k)
             obj = model_class(**f['properties'])
             obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
             objects.append(obj)
@@ -239,6 +243,7 @@ class FileImportResource(Resource):
         self.fill_table(bundle.obj.model_ct.model_class(), geojson_data)
         return bundle
 
+    @transaction.atomic
     def post_list(self, request, **kwargs):
         form = TableFromFileForm(request.POST, request.FILES)
         if not form.is_valid():
