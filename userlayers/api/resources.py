@@ -35,6 +35,7 @@ logger = logging.getLogger('userlayers.api.schema')
 
 class FieldsResource(ModelResource):
     type = fields.ApiField()
+    table = fields.ToOneField('userlayers.api.resources.TablesResource', 'model_def')
     
     class Meta:
         queryset = FieldDefinition.objects.all()
@@ -68,7 +69,7 @@ class FieldsResource(ModelResource):
         return bundle
 
 class TablesResource(ModelResource):
-    fields = fields.ToManyField(FieldsResource, 'fielddefinitions', full=True)
+    fields = fields.ToManyField(FieldsResource, 'fielddefinitions', related_name='table', full=True)
     
     class Meta:
         queryset = ModelDefinition.objects.all()
@@ -114,12 +115,12 @@ class TablesResource(ModelResource):
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
-        
+         
         # add geo field
         Model = mutant.contrib.geo.models.GeometryFieldDefinition
         obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
         bundle.data['fields'].append(Bundle(obj=obj))
-        
+         
         return super(TablesResource, self).save_m2m(bundle)
 
 class TableProxyResource(Resource):

@@ -12,11 +12,14 @@ FIELD_TYPES = (
 
 class FieldForm(forms.ModelForm):
     type = forms.ChoiceField(choices=FIELD_TYPES)
+    table = forms.CharField(required=False)
     
     class Meta:
         model = FieldDefinition
         fields = ['name',]
 
+    def clean_table(self):
+        return self.cleaned_data['table'] or None 
 
 class TableFromFileForm(forms.Form):
     file = forms.FileField()
