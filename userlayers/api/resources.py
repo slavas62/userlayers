@@ -22,7 +22,7 @@ from userlayers.models import UserToTable
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
-from .validators import TableValidation
+from .validators import TableValidation, FieldValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
@@ -40,6 +40,7 @@ class FieldsResource(ModelResource):
     class Meta:
         queryset = FieldDefinition.objects.all()
         authorization = FieldAuthorization()
+        validation = FieldValidation()
         fields = ['name']
     
     def hydrate(self, bundle):
