@@ -53,4 +53,6 @@ class TableAuthorization(FullAccessForLoginedUsers):
 
 class FieldAuthorization(TableAuthorization):
     def filter_for_user(self, object_list, user):
+        if user.is_superuser:
+            return object_list
         return object_list.filter(model_def__usertotable__in=UserToTable.objects.filter(user=user))
