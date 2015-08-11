@@ -79,6 +79,7 @@ class TablesResource(ModelResource):
         fields = ['name']
     
     def fill_obj(self, bundle):
+        bundle.obj.name = translit_and_slugify(bundle.data['name'])[:100]
         bundle.obj.verbose_name = bundle.data['name']
         bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
         bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
@@ -88,14 +89,20 @@ class TablesResource(ModelResource):
     def hydrate(self, bundle):
         bundle = super(TablesResource, self).hydrate(bundle)
         self.fill_obj(bundle)
-        bundle.data['name'] = translit_and_slugify(bundle.data['name'])[:100]
         return bundle
 
     def emit_created_signal(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
         table_created.send(sender='api', user=bundle.request.user, md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
-
+ 
+    @transaction.atomic
+    def save(self, bundle, *args, **kwargs):
+        if bundle.obj.pk:
+            #hack for renaming
+            bundle.obj.model_class(force_create=True)
+        return super(TablesResource, self).save(bundle, *args, **kwargs)
+        
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
         bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
@@ -117,10 +124,11 @@ class TablesResource(ModelResource):
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
          
-        # add geo field
-        Model = mutant.contrib.geo.models.GeometryFieldDefinition
-        obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
-        bundle.data['fields'].append(Bundle(obj=obj))
+        # add geo field only on creating (not updating)
+        if not bundle.obj.fielddefinitions.all():
+            Model = mutant.contrib.geo.models.GeometryFieldDefinition
+            obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
+            bundle.data['fields'].append(Bundle(obj=obj))
          
         return super(TablesResource, self).save_m2m(bundle)
 
