@@ -79,12 +79,13 @@ class TablesResource(ModelResource):
         fields = ['name']
     
     def fill_obj(self, bundle):
-        bundle.obj.name = translit_and_slugify(bundle.data['name'])[:100]
+        slug = translit_and_slugify(bundle.data['name'])
+        bundle.obj.name = slug[:100]
         bundle.obj.verbose_name = bundle.data['name']
         bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
         bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
-        bundle.obj.model = translit_and_slugify(bundle.data['name'])[:100]
-        bundle.obj.object_name = translit_and_slugify(bundle.data['name'])[:255]
+        bundle.obj.model = slug[:100]
+        bundle.obj.object_name = slug[:255]
         
     def hydrate(self, bundle):
         bundle = super(TablesResource, self).hydrate(bundle)
