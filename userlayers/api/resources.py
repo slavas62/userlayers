@@ -17,7 +17,7 @@ from tastypie.authorization import Authorization
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
-from userlayers.signals import table_created
+from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
@@ -92,10 +92,16 @@ class TablesResource(ModelResource):
         self.fill_obj(bundle)
         return bundle
 
-    def emit_created_signal(self, bundle):
+    def signal_payload(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
-        table_created.send(sender='api', user=bundle.request.user, md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
+        return dict(sender='api', user=bundle.request.user, md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
+
+    def emit_created_signal(self, bundle):
+        table_created.send(**self.signal_payload(bundle))
+    
+    def emit_updated_signal(self, bundle):
+        table_updated.send(**self.signal_payload(bundle))
  
     @transaction.atomic
     def save(self, bundle, *args, **kwargs):
@@ -112,8 +118,10 @@ class TablesResource(ModelResource):
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
 
+    @transaction.atomic
     def obj_update(self, *args, **kwargs):
         bundle = super(TablesResource, self).obj_update(*args, **kwargs)
+        self.emit_updated_signal(bundle)
         logger.info('"%s" updated table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
 
