@@ -17,9 +17,11 @@ class GeoJsonSerializer(Serializer):
                 if key == 'id':
                     f[key] = value
                     return
-                if key in ['coordinates', 'type']:
-                    f['geometry'][key] = value
                 if type(value)==type({}):
+                    if 'type' in value.keys():
+                        if value['type'] == 'GeometryCollection' or 'coordinates' in value.keys():
+                            f['geometry'] = value
+                            return
                     for k in value:
                         recurse(k, value[k])
                 else:
