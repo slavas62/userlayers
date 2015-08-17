@@ -7,7 +7,7 @@ from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.http.response import HttpResponse
-from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.geos import GEOSGeometry, WKBWriter
 from django.db import transaction
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
@@ -17,7 +17,7 @@ from tastypie.authorization import Authorization
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
-from userlayers.signals import table_created
+from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
@@ -92,10 +92,16 @@ class TablesResource(ModelResource):
         self.fill_obj(bundle)
         return bundle
 
-    def emit_created_signal(self, bundle):
+    def signal_payload(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
-        table_created.send(sender='api', user=bundle.request.user, md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
+        return dict(sender='api', user=bundle.request.user, md=bundle.obj, uri=uri, proxy_uri=proxy_uri)
+
+    def emit_created_signal(self, bundle):
+        table_created.send(**self.signal_payload(bundle))
+    
+    def emit_updated_signal(self, bundle):
+        table_updated.send(**self.signal_payload(bundle))
  
     @transaction.atomic
     def save(self, bundle, *args, **kwargs):
@@ -112,8 +118,10 @@ class TablesResource(ModelResource):
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
 
+    @transaction.atomic
     def obj_update(self, *args, **kwargs):
         bundle = super(TablesResource, self).obj_update(*args, **kwargs)
+        self.emit_updated_signal(bundle)
         logger.info('"%s" updated table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
 
@@ -218,10 +226,8 @@ class FileImportResource(Resource):
         authorization = FullAccessForLoginedUsers()
 
     def create_table(self, request, name, geojson_data):
-        if not len(geojson_data[0]['features']):
-            raise FileImportError(u'file does not contain any features')
         tr = TablesResource()
-        props = geojson_data[0]['features'][0]['properties']
+        props = geojson_data['features'][0]['properties']
         fields = []
         for k, v in props.iteritems():
             fields.append({'name': k, 'type': 'text',})
@@ -230,13 +236,16 @@ class FileImportResource(Resource):
 
     def fill_table(self, model_class, geojson_data):
         objects = []
-        for f in geojson_data[0]['features']:
+        for f in geojson_data['features']:
             for k, v in f['properties'].iteritems():
                 if normalize_field_name(k) != k:
                     f['properties'][normalize_field_name(k)] = v
                     f['properties'].pop(k)
             obj = model_class(**f['properties'])
             obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
+            if obj.geometry.hasz:
+                #force 3D to 2D geometry convertation
+                obj.geometry = WKBWriter().write(obj.geometry)
             objects.append(obj)
         model_class.objects.bulk_create(objects)
 
@@ -248,6 +257,10 @@ class FileImportResource(Resource):
         dst_file.close()
         try:
             geojson_data = convert_to_geojson_data(dst_file.name)
+            not_empty_layers = [l for l in geojson_data if len(l['features'])]
+            if not not_empty_layers:
+                raise FileImportError(u'file does not contain any features')
+            geojson_data = not_empty_layers[0]
         except VectorReaderError:
             raise FileImportError(u'wrong file format')
         bundle = self.create_table(request, name, geojson_data)
