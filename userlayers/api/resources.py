@@ -244,6 +244,7 @@ class FileImportResource(Resource):
             obj = model_class(**f['properties'])
             obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
             if obj.geometry.hasz:
+                #force 3D to 2D geometry convertation
                 obj.geometry = WKBWriter().write(obj.geometry)
             objects.append(obj)
         model_class.objects.bulk_create(objects)
