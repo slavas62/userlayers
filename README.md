@@ -12,9 +12,13 @@ Add apps to INSTALLED_APPS:
 INSTALLED_APPS += (
     'mutant',
     'mutant.contrib.boolean',
-    'mutant.contrib.numeric',
-    'mutant.contrib.text',
+    'mutant.contrib.file',
     'mutant.contrib.geo',
+    'mutant.contrib.numeric',
+    'mutant.contrib.related',
+    'mutant.contrib.temporal',
+    'mutant.contrib.text',
+    'mutant.contrib.web',
     
     'userlayers',
 )
