@@ -7,7 +7,7 @@ from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.http.response import HttpResponse
-from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.geos import GEOSGeometry, WKBWriter
 from django.db import transaction
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
@@ -243,7 +243,8 @@ class FileImportResource(Resource):
                     f['properties'].pop(k)
             obj = model_class(**f['properties'])
             obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
-            import pdb;pdb.set_trace()
+            if obj.geometry.hasz:
+                obj.geometry = WKBWriter().write(obj.geometry)
             objects.append(obj)
         model_class.objects.bulk_create(objects)
 
