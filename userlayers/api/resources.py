@@ -226,10 +226,8 @@ class FileImportResource(Resource):
         authorization = FullAccessForLoginedUsers()
 
     def create_table(self, request, name, geojson_data):
-        if not len(geojson_data[0]['features']):
-            raise FileImportError(u'file does not contain any features')
         tr = TablesResource()
-        props = geojson_data[0]['features'][0]['properties']
+        props = geojson_data['features'][0]['properties']
         fields = []
         for k, v in props.iteritems():
             fields.append({'name': k, 'type': 'text',})
@@ -238,13 +236,14 @@ class FileImportResource(Resource):
 
     def fill_table(self, model_class, geojson_data):
         objects = []
-        for f in geojson_data[0]['features']:
+        for f in geojson_data['features']:
             for k, v in f['properties'].iteritems():
                 if normalize_field_name(k) != k:
                     f['properties'][normalize_field_name(k)] = v
                     f['properties'].pop(k)
             obj = model_class(**f['properties'])
             obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
+            import pdb;pdb.set_trace()
             objects.append(obj)
         model_class.objects.bulk_create(objects)
 
@@ -256,6 +255,10 @@ class FileImportResource(Resource):
         dst_file.close()
         try:
             geojson_data = convert_to_geojson_data(dst_file.name)
+            not_empty_layers = [l for l in geojson_data if len(l['features'])]
+            if not not_empty_layers:
+                raise FileImportError(u'file does not contain any features')
+            geojson_data = not_empty_layers[0]
         except VectorReaderError:
             raise FileImportError(u'wrong file format')
         bundle = self.create_table(request, name, geojson_data)
