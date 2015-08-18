@@ -13,6 +13,6 @@ setup(
         'vectortools == 0.0.1',
     ],
     dependency_links = [
-        'https://bitbucket.org/lighter/vectortools/get/3fe839585c4f.zip#egg=vectortools-0.0.1',
+        'https://bitbucket.org/lighter/vectortools/get/b21ca84057b1.zip#egg=vectortools-0.0.1',
     ],
 )
