@@ -8,6 +8,7 @@ from django.conf.urls import url
 from django.core.urlresolvers import reverse
 from django.http.response import HttpResponse
 from django.contrib.gis.geos import GEOSGeometry, WKBWriter
+from django.contrib.gis.geos.error import GEOSException
 from django.db import transaction
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
@@ -242,7 +243,10 @@ class FileImportResource(Resource):
                     f['properties'][normalize_field_name(k)] = v
                     f['properties'].pop(k)
             obj = model_class(**f['properties'])
-            obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
+            try:
+                obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
+            except GEOSException:
+                raise FileImportError(u'file contains wrong geometry')
             if obj.geometry.hasz:
                 #force 3D to 2D geometry convertation
                 obj.geometry = WKBWriter().write(obj.geometry)
