@@ -17,15 +17,16 @@ from tastypie.bundle import Bundle
 from tastypie.authorization import Authorization
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
-from mutant.models import ModelDefinition, FieldDefinition
+from mutant.models import FieldDefinition
 from userlayers.signals import table_created, table_updated
-from userlayers.models import UserToTable
+from userlayers.models import ModelDefinition
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
 from .validators import TableValidation, FieldValidation
 from .serializers import GeoJsonSerializer
-from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
+# from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
+from tastypie.authorization import Authorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
 
@@ -82,6 +83,7 @@ class TablesResource(ModelResource):
     def fill_obj(self, bundle):
         slug = translit_and_slugify(bundle.data['name'])
         bundle.obj.name = slug[:100]
+        bundle.obj.owner = bundle.request.user
         bundle.obj.verbose_name = bundle.data['name']
         bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
         bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
@@ -114,7 +116,6 @@ class TablesResource(ModelResource):
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
         bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
-        UserToTable(md=bundle.obj, user=bundle.request.user).save()
         self.emit_created_signal(bundle)
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
@@ -160,12 +161,12 @@ class TableProxyResource(Resource):
         user = getattr(request, 'user', None)
         if not user or user.is_anonymous():
             return http.HttpNotFound()
-        lookup = dict(md__pk=self.table_pk)
+        lookup = dict(pk=self.table_pk)
         if not user.is_superuser:
-            lookup['user'] = user
+            lookup['owner'] = user
         try:
-            md = UserToTable.objects.get(**lookup).md
-        except UserToTable.DoesNotExist:
+            md = ModelDefinition.objects.get(**lookup)
+        except ModelDefinition.DoesNotExist:
             return http.HttpNotFound()
         
         proxy = self

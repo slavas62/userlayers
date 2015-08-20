@@ -1,4 +1,4 @@
-from userlayers.models import UserToTable
+from userlayers.models import ModelDefinition
 
 class FullAccessForLoginedUsers(object):
     def base_check(self, object_list, bundle):
@@ -38,7 +38,7 @@ class TableAuthorization(FullAccessForLoginedUsers):
     def filter_for_user(self, object_list, user):
         if user.is_superuser:
             return object_list
-        return object_list.filter(usertotable__in=UserToTable.objects.filter(user=user))
+        return object_list.filter(owner=user)
   
     def check_list(self, object_list, bundle):
         if not super(TableAuthorization, self).check_list(object_list, bundle):
@@ -55,4 +55,4 @@ class FieldAuthorization(TableAuthorization):
     def filter_for_user(self, object_list, user):
         if user.is_superuser:
             return object_list
-        return object_list.filter(model_def__usertotable__in=UserToTable.objects.filter(user=user))
+        return object_list.filter(model_def__in=ModelDefinition.objects.filter(owner=user))
