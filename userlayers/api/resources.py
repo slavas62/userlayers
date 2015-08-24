@@ -25,7 +25,7 @@ from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
 from .validators import TableValidation, FieldValidation
 from .serializers import GeoJsonSerializer
-# from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
+from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from tastypie.authorization import Authorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
