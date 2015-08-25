@@ -24,6 +24,14 @@ INSTALLED_APPS += (
 )
 ```
 
+Add to MIDDLEWARE_CLASSES:
+
+```
+MIDDLEWARE_CLASSES += (
+    'userlayers.middleware.RequestMiddleware',
+)
+```
+
 Add to urls.py:
 
 ```

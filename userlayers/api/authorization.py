@@ -1,4 +1,4 @@
-from userlayers.models import ModelDefinition
+from ..models import ModelDefinition
 
 class FullAccessForLoginedUsers(object):
     def base_check(self, object_list, bundle):
