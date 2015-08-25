@@ -7,6 +7,7 @@ FIELD_TYPES = (
 
     ('integer', mutant.contrib.numeric.models.BigIntegerFieldDefinition),
     ('small_integer', mutant.contrib.numeric.models.SmallIntegerFieldDefinition),
+    ('float', mutant.contrib.numeric.models.FloatFieldDefinition),
 
     ('null_boolean', mutant.contrib.boolean.models.NullBooleanFieldDefinition),
     ('boolean', mutant.contrib.boolean.models.BooleanFieldDefinition),

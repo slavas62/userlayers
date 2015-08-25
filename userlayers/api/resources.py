@@ -231,7 +231,13 @@ class FileImportResource(Resource):
         props = geojson_data['features'][0]['properties']
         fields = []
         for k, v in props.iteritems():
-            fields.append({'name': k, 'type': 'text',})
+            if isinstance(v, (int, long)):
+                ftype = 'integer'
+            elif isinstance(v, (float)):
+                ftype = 'float'
+            else:
+                ftype = 'text'
+            fields.append({'name': k, 'type': ftype,})
         bundle = tr.build_bundle(request=request, data=dict(name=name, fields=fields))
         return tr.obj_create(bundle)
 
