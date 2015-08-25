@@ -1,33 +1,31 @@
-# coding: utf-8
-
-from django.db import models
+from django.db import models, transaction
 from django.db.models import signals
 from django.conf import settings
 from mutant.models import ModelDefinition as MD
+from .middleware import get_request
 
 
-# TODO signals table_create & table_update
 class ModelDefinition(MD):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL)
 
-    class Meta:
-        verbose_name = u'модель'
-        verbose_name_plural = u'модели'
-
+    @transaction.atomic
     def save(self, *args, **kwargs):
-        # TODO optimize import
         # fix crash import
         from .api.naming import translit_and_slugify, get_app_label_for_user, get_db_table_name
+        request = get_request()
+        user = request.user
         slug = translit_and_slugify(self.name)
         self.name = slug[:100]
+        self.owner = user
         if not self.verbose_name:
             self.verbose_name = self.name
         if not self.verbose_name_plural:
             self.verbose_name_plural = self.name
-        self.app_label = get_app_label_for_user(self.owner)[:100]
-        self.db_table = get_db_table_name(self.owner, self.name)[:63]
+        self.app_label = get_app_label_for_user(user)[:100]
+        self.db_table = get_db_table_name(user, self.name)[:63]
         self.model = slug[:100]
-        self.object_name = slug[:255]
+        if not self.object_name:
+            self.object_name = slug[:255]
         if self.pk:
             self.model_class(force_create=True)
         return super(ModelDefinition, self).save(*args, **kwargs)
