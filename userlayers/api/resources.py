@@ -79,7 +79,7 @@ class TablesResource(ModelResource):
         fields = ['name']
 
     def fill_obj(self, bundle):
-        pass
+        bundle.obj.owner = bundle.request.user
 
     def hydrate(self, bundle):
         bundle = super(TablesResource, self).hydrate(bundle)
