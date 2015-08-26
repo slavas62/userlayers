@@ -178,6 +178,13 @@ class TableProxyResource(Resource):
                 authorization = Authorization()
                 serializer = GeoJsonSerializer()
         
+            def dispatch(self, *args, **kwargs):
+                response = super(R, self).dispatch(*args, **kwargs)
+                ct = response.get('Content-Type')
+                if ct and ct.startswith('application/zip'):
+                    response['Content-Disposition'] = 'attachment; filename=%s.zip' % md.name
+                return response
+        
             def get_resource_uri(self, bundle_or_obj=None, **kwargs):
                 url = proxy.get_resource_uri()
                 if bundle_or_obj:
@@ -186,8 +193,8 @@ class TableProxyResource(Resource):
                 return url
         
             def serialize(self, request, data, format, options=None):
-                options = options or {}
-                options['geojson'] = True
+#                 options = options or {}
+#                 options['geojson'] = True
                 return super(R, self).serialize(request, data, format, options)
             
             def obj_create(self, bundle, **kwargs):
