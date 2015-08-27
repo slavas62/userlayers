@@ -10,6 +10,6 @@ class FieldValidation(Validation):
 
 class TableValidation(Validation):
     def is_valid(self, bundle, request=None):
-        if ModelDefinition.objects.filter(app_label=get_app_label_for_user(bundle.request.user), name=bundle.data['name']):
-            return {'name': u'table with name "%s" already exists' % bundle.data['name']}
+        if ModelDefinition.objects.filter(app_label=get_app_label_for_user(bundle.request.user), name=bundle.obj.name):
+            return {'name': u'table with name "%s" already exists' % bundle.obj.name}
         return {}        

@@ -88,11 +88,6 @@ class TablesResource(ModelResource):
         bundle.obj.model = slug[:100]
         bundle.obj.object_name = slug[:255]
         
-    def hydrate(self, bundle):
-        bundle = super(TablesResource, self).hydrate(bundle)
-        self.fill_obj(bundle)
-        return bundle
-
     def signal_payload(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
@@ -106,6 +101,7 @@ class TablesResource(ModelResource):
  
     @transaction.atomic
     def save(self, bundle, *args, **kwargs):
+        self.fill_obj(bundle)
         if bundle.obj.pk:
             #hack for renaming
             bundle.obj.model_class(force_create=True)
