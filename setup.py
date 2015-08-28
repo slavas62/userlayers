@@ -14,7 +14,7 @@ setup(
         'shapeutils == 0.0.1',
     ],
     dependency_links = [
-        'https://bitbucket.org/lighter/vectortools/get/b21ca84057b1.zip#egg=vectortools-0.0.1',
-        'https://bitbucket.org/lighter/shape-utils/get/709af60.zip#egg=shapeutils-0.0.1',
+        'https://bitbucket.org/lighter/vectortools/get/7278a1d.zip#egg=vectortools-0.0.1',
+        'https://bitbucket.org/lighter/shape-utils/get/eec0952.zip#egg=shapeutils-0.0.1',
     ],
 )
