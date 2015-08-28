@@ -10,6 +10,9 @@ class GeoJsonSerializer(Serializer):
         'shapefile': 'application/zip',
     }
     
+    def from_geojson(self, *args, **kwargs):
+        return self.from_json(*args, **kwargs)
+    
     def to_geojson(self, data, options=None):
         """
         Given some Python data, produces GeoJSON output.
