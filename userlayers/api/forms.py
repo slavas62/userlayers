@@ -1,39 +1,50 @@
-import mutant
+from mutant.contrib.text.models import TextFieldDefinition, CharFieldDefinition
+from mutant.contrib.numeric.models import BigIntegerFieldDefinition, SmallIntegerFieldDefinition
+from mutant.contrib.boolean.models import NullBooleanFieldDefinition, BooleanFieldDefinition
+from mutant.contrib.file.models import FilePathFieldDefinition
+from mutant.contrib.related.models import ForeignKeyDefinition, OneToOneFieldDefinition, ManyToManyFieldDefinition
+from mutant.contrib.web.models import GenericIPAddressFieldDefinition, IPAddressFieldDefinition, EmailFieldDefinition, \
+    URLFieldDefinition
+from mutant.contrib.geo.models import GeometryFieldDefinition, PointFieldDefinition, MultiPointFieldDefinition, \
+    MultiPointFieldDefinition, LineStringFieldDefinition, MultiLineStringFieldDefinition, PolygonFieldDefinition, \
+    MultiPolygonFieldDefinition, GeometryCollectionFieldDefinition
+from mutant.contrib.temporal.models import DateFieldDefinition, TimeFieldDefinition, DateTimeFieldDefinition
+from mutant.models import FieldDefinition
 from django import forms
 
 FIELD_TYPES = (
-    ('text', mutant.contrib.text.models.TextFieldDefinition),
-    ('varchar', mutant.contrib.text.models.CharFieldDefinition),
+    ('text', TextFieldDefinition),
+    ('varchar', CharFieldDefinition),
 
-    ('integer', mutant.contrib.numeric.models.BigIntegerFieldDefinition),
-    ('small_integer', mutant.contrib.numeric.models.SmallIntegerFieldDefinition),
+    ('integer', BigIntegerFieldDefinition),
+    ('small_integer', SmallIntegerFieldDefinition),
 
-    ('null_boolean', mutant.contrib.boolean.models.NullBooleanFieldDefinition),
-    ('boolean', mutant.contrib.boolean.models.BooleanFieldDefinition),
+    ('null_boolean', NullBooleanFieldDefinition),
+    ('boolean', BooleanFieldDefinition),
 
-    ('file', mutant.contrib.file.models.FilePathFieldDefinition),
+    ('file', FilePathFieldDefinition),
 
-    ('foreign_key', mutant.contrib.related.models.ForeignKeyDefinition),
-    ('one_to_one', mutant.contrib.related.models.OneToOneFieldDefinition),
-    ('many_to_many', mutant.contrib.related.models.ManyToManyFieldDefinition),
+    ('foreign_key', ForeignKeyDefinition),
+    ('one_to_one', OneToOneFieldDefinition),
+    ('many_to_many', ManyToManyFieldDefinition),
 
-    ('ip_generic', mutant.contrib.web.models.GenericIPAddressFieldDefinition),
-    ('ip', mutant.contrib.web.models.IPAddressFieldDefinition),
-    ('email', mutant.contrib.web.models.EmailFieldDefinition),
-    ('url', mutant.contrib.web.models.URLFieldDefinition),
+    ('ip_generic', GenericIPAddressFieldDefinition),
+    ('ip', IPAddressFieldDefinition),
+    ('email', EmailFieldDefinition),
+    ('url', URLFieldDefinition),
 
-    ('geometry', mutant.contrib.geo.models.GeometryFieldDefinition),
-    ('point', mutant.contrib.geo.models.PointFieldDefinition),
-    ('multi_point', mutant.contrib.geo.models.MultiPointFieldDefinition),
-    ('line_string', mutant.contrib.geo.models.LineStringFieldDefinition),
-    ('multi_line_string', mutant.contrib.geo.models.MultiLineStringFieldDefinition),
-    ('polygon', mutant.contrib.geo.models.PolygonFieldDefinition),
-    ('multi_polygon', mutant.contrib.geo.models.MultiPolygonFieldDefinition),
-    ('geometry_collection', mutant.contrib.geo.models.GeometryCollectionFieldDefinition),
+    ('geometry', GeometryFieldDefinition),
+    ('point', PointFieldDefinition),
+    ('multi_point', MultiPointFieldDefinition),
+    ('line_string', LineStringFieldDefinition),
+    ('multi_line_string', MultiLineStringFieldDefinition),
+    ('polygon', PolygonFieldDefinition),
+    ('multi_polygon', MultiPolygonFieldDefinition),
+    ('geometry_collection', GeometryCollectionFieldDefinition),
 
-    ('date', mutant.contrib.temporal.models.DateFieldDefinition),
-    ('time', mutant.contrib.temporal.models.TimeFieldDefinition),
-    ('datetime', mutant.contrib.temporal.models.DateTimeFieldDefinition),
+    ('date', DateFieldDefinition),
+    ('time', TimeFieldDefinition),
+    ('datetime', DateTimeFieldDefinition),
 )
 
 class FieldForm(forms.ModelForm):
@@ -41,7 +52,7 @@ class FieldForm(forms.ModelForm):
     table = forms.CharField(required=False)
     
     class Meta:
-        model = mutant.models.FieldDefinition
+        model = FieldDefinition
         fields = ['name']
 
     def clean_table(self):
