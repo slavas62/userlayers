@@ -23,7 +23,7 @@ from userlayers.models import UserToTable
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
-from .validators import TableValidation, FieldValidation
+from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
@@ -75,7 +75,6 @@ class TablesResource(ModelResource):
     
     class Meta:
         queryset = ModelDefinition.objects.all()
-        validation = TableValidation()
         authorization = TableAuthorization()
         fields = ['name']
     
@@ -85,9 +84,10 @@ class TablesResource(ModelResource):
         bundle.obj.verbose_name = bundle.data['name']
         bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
         if not bundle.obj.db_table:
-            bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
-        bundle.obj.model = slug[:100]
-        bundle.obj.object_name = slug[:255]
+            table_name = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
+            bundle.obj.db_table = table_name
+            bundle.obj.model = table_name
+            bundle.obj.object_name = table_name
         
     def signal_payload(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
