@@ -173,6 +173,7 @@ class TableProxyResource(Resource):
                 queryset = md.model_class().objects.all()
                 authorization = Authorization()
                 serializer = GeoJsonSerializer()
+                max_limit = None
         
             def dispatch(self, *args, **kwargs):
                 response = super(R, self).dispatch(*args, **kwargs)
