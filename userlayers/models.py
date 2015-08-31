@@ -3,12 +3,23 @@
 from django.db import models
 from django.db.models import signals
 from django.conf import settings
-from mutant.models import ModelDefinition as MD
+from mutant.models import ModelDefinition as MD, ModelDefinitionManager as MDManager
+
+
+class ModelDefinitionManager(MDManager):
+    def get_slug_by_name(self, name):
+        from .api.naming import translit_and_slugify
+        return translit_and_slugify(name)
+
+    def get_by_name(self, name):
+        return self.get(name=self.get_slug_by_name(name))
 
 
 # TODO signals table_create & table_update
 class ModelDefinition(MD):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL)
+
+    objects = ModelDefinitionManager()
 
     class Meta:
         verbose_name = u'модель'
@@ -17,8 +28,8 @@ class ModelDefinition(MD):
     def save(self, *args, **kwargs):
         # TODO optimize import
         # fix crash import
-        from .api.naming import translit_and_slugify, get_app_label_for_user, get_db_table_name
-        slug = translit_and_slugify(self.name)
+        from .api.naming import get_app_label_for_user, get_db_table_name
+        slug = ModelDefinition.objects.get_slug_by_name(self.name)
         self.name = slug[:100]
         if not self.verbose_name:
             self.verbose_name = self.name
