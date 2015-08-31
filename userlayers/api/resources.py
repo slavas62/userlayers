@@ -84,7 +84,8 @@ class TablesResource(ModelResource):
         bundle.obj.name = slug[:100]
         bundle.obj.verbose_name = bundle.data['name']
         bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
-        bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
+        if not bundle.obj.db_table:
+            bundle.obj.db_table = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
         bundle.obj.model = slug[:100]
         bundle.obj.object_name = slug[:255]
         
