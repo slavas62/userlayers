@@ -198,10 +198,6 @@ class TableProxyResource(Resource):
                     url += '%s%s' % (kw['pk'], trailing_slash())
                 return url
 
-            def get_table_api_uri(self, api_name='v1'):
-                return reverse('api_dispatch_detail', kwargs={
-                    'api_name': api_name, 'resource_name': 'tables', 'pk': md.id})
-
             def serialize(self, request, data, format, options=None):
 #                 options = options or {}
 #                 options['geojson'] = True
