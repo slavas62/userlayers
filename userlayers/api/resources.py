@@ -66,8 +66,12 @@ class FieldsResource(ModelResource):
         if cls == mutant.contrib.geo.models.GeometryFieldDefinition:
             f_type = 'geometry'
         else:
-            f_type = dict((v,k) for k,v in FIELD_TYPES)[cls]
+            f_type = dict((v, k) for k, v in FIELD_TYPES)[cls]
         bundle.data['type'] = f_type
+        bundle.data['verbose_name'] = bundle.obj.verbose_name
+        bundle.data['help_text'] = bundle.obj.help_text
+        bundle.data['null'] = bundle.obj.null
+        bundle.data['blank'] = bundle.obj.blank
         return bundle
 
 class TablesResource(ModelResource):
@@ -76,8 +80,12 @@ class TablesResource(ModelResource):
     class Meta:
         queryset = ModelDefinition.objects.all()
         authorization = TableAuthorization()
-        fields = ['name']
-    
+        fields = ['name', 'verbose_name', 'verbose_name_plural']
+
+    def dehydrate(self, bundle):
+        bundle.data['objects_uri'] = TableProxyResource().uri_for_table(bundle.obj.pk)
+        return bundle
+
     def fill_obj(self, bundle):
         slug = translit_and_slugify(bundle.data['name'])
         bundle.obj.name = slug[:100]
@@ -99,7 +107,7 @@ class TablesResource(ModelResource):
     
     def emit_updated_signal(self, bundle):
         table_updated.send(**self.signal_payload(bundle))
- 
+
     @transaction.atomic
     def save(self, bundle, *args, **kwargs):
         self.fill_obj(bundle)
@@ -145,7 +153,7 @@ class TableProxyResource(Resource):
     class Meta:
         resource_name = 'tablesdata'
         authorization = FullAccessForLoginedUsers()
-    
+
     def uri_for_table(self, table_pk):
         return reverse('api_dispatch_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name))
     
@@ -189,7 +197,11 @@ class TableProxyResource(Resource):
                     kw = self.resource_uri_kwargs(bundle_or_obj)
                     url += '%s%s' % (kw['pk'], trailing_slash())
                 return url
-        
+
+            def get_table_api_uri(self, api_name='v1'):
+                return reverse('api_dispatch_detail', kwargs={
+                    'api_name': api_name, 'resource_name': 'tables', 'pk': md.id})
+
             def serialize(self, request, data, format, options=None):
 #                 options = options or {}
 #                 options['geojson'] = True
