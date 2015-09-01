@@ -36,9 +36,11 @@ class ModelDefinition(MD):
         if not self.verbose_name_plural:
             self.verbose_name_plural = self.name
         self.app_label = get_app_label_for_user(self.owner)[:100]
-        self.db_table = get_db_table_name(self.owner, self.name)[:63]
-        self.model = slug[:100]
-        self.object_name = slug[:255]
+        if not self.db_table:
+            table_name = get_db_table_name(self.owner, self.name)[:63]
+            self.db_table = table_name
+            self.model = table_name
+            self.object_name = table_name
         if self.pk:
             self.model_class(force_create=True)
         return super(ModelDefinition, self).save(*args, **kwargs)

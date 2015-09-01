@@ -1,5 +1,5 @@
 from mutant.contrib.text.models import TextFieldDefinition, CharFieldDefinition
-from mutant.contrib.numeric.models import BigIntegerFieldDefinition, SmallIntegerFieldDefinition
+from mutant.contrib.numeric.models import BigIntegerFieldDefinition, SmallIntegerFieldDefinition, FloatFieldDefinition
 from mutant.contrib.boolean.models import NullBooleanFieldDefinition, BooleanFieldDefinition
 from mutant.contrib.file.models import FilePathFieldDefinition
 from mutant.contrib.related.models import ForeignKeyDefinition, OneToOneFieldDefinition, ManyToManyFieldDefinition
@@ -18,6 +18,7 @@ FIELD_TYPES = (
 
     ('integer', BigIntegerFieldDefinition),
     ('small_integer', SmallIntegerFieldDefinition),
+    ('float', FloatFieldDefinition),
 
     ('null_boolean', NullBooleanFieldDefinition),
     ('boolean', BooleanFieldDefinition),

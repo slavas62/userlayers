@@ -1,7 +1,18 @@
 from tastypie.serializers import Serializer
 from django.core.serializers import json
+from shapeutils.convert import geojson_to_zipshape
 
 class GeoJsonSerializer(Serializer):
+    formats = ['geojson', 'shapefile']
+     
+    content_types = {
+        'geojson': 'application/json',
+        'shapefile': 'application/zip',
+    }
+    
+    def from_geojson(self, *args, **kwargs):
+        return self.from_json(*args, **kwargs)
+    
     def to_geojson(self, data, options=None):
         """
         Given some Python data, produces GeoJSON output.
@@ -58,12 +69,5 @@ class GeoJsonSerializer(Serializer):
             data = _build_feature(data)
         return json.json.dumps(data, cls=json.DjangoJSONEncoder, sort_keys=True, ensure_ascii=False)   
     
-    def to_json(self, data, options=None):
-        """
-        Override to enable GeoJSON generation when the geojson option is passed.
-        """
-        options = options or {}
-        if options.get('geojson'):
-            return self.to_geojson(data, options)
-        else:
-            return super(GeoJsonSerializer, self).to_json(data, options)
+    def to_shapefile(self, data, options=None):
+        return geojson_to_zipshape(self.to_geojson(data, options))

@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
+from django.http.response import HttpResponse
 from django.contrib.gis.geos import GEOSGeometry, WKBWriter
 from django.contrib.gis.geos.error import GEOSException
 from django.db import transaction
@@ -13,21 +14,20 @@ from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
 from tastypie.bundle import Bundle
-from tastypie.utils import trailing_slash
-from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.authorization import Authorization
+from tastypie.utils import trailing_slash
+from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import FieldDefinition
+from userlayers.signals import table_created, table_updated
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
-from .validators import TableValidation, FieldValidation
+from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
-from ..signals import table_created, table_updated
 from ..models import ModelDefinition
-
 get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
 
@@ -74,17 +74,11 @@ class TablesResource(ModelResource):
 
     class Meta:
         queryset = ModelDefinition.objects.all()
-        validation = TableValidation()
         authorization = TableAuthorization()
         fields = ['name']
 
     def fill_obj(self, bundle):
         bundle.obj.owner = bundle.request.user
-
-    def hydrate(self, bundle):
-        bundle = super(TablesResource, self).hydrate(bundle)
-        self.fill_obj(bundle)
-        return bundle
 
     def signal_payload(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
@@ -96,6 +90,11 @@ class TablesResource(ModelResource):
 
     def emit_updated_signal(self, bundle):
         table_updated.send(**self.signal_payload(bundle))
+
+    @transaction.atomic
+    def save(self, bundle, *args, **kwargs):
+        self.fill_obj(bundle)
+        return super(TablesResource, self).save(bundle, *args, **kwargs)
 
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
@@ -149,7 +148,7 @@ class TableProxyResource(Resource):
         if not user.is_superuser:
             lookup['owner'] = user
         try:
-            md = ModelDefinition.objects.get(**lookup)
+            md = ModelDefinition.objects.get(**lookup).md
         except ModelDefinition.DoesNotExist:
             return http.HttpNotFound()
 
@@ -162,6 +161,14 @@ class TableProxyResource(Resource):
                 queryset = md.model_class().objects.all()
                 authorization = Authorization()
                 serializer = GeoJsonSerializer()
+                max_limit = None
+
+            def dispatch(self, *args, **kwargs):
+                response = super(R, self).dispatch(*args, **kwargs)
+                ct = response.get('Content-Type')
+                if ct and ct.startswith('application/zip'):
+                    response['Content-Disposition'] = 'attachment; filename=%s.zip' % md.name
+                return response
 
             def get_resource_uri(self, bundle_or_obj=None, **kwargs):
                 url = proxy.get_resource_uri()
@@ -171,8 +178,8 @@ class TableProxyResource(Resource):
                 return url
 
             def serialize(self, request, data, format, options=None):
-                options = options or {}
-                options['geojson'] = True
+#                 options = options or {}
+#                 options['geojson'] = True
                 return super(R, self).serialize(request, data, format, options)
 
             def obj_create(self, bundle, **kwargs):
@@ -216,7 +223,13 @@ class FileImportResource(Resource):
         props = geojson_data['features'][0]['properties']
         fields = []
         for k, v in props.iteritems():
-            fields.append({'name': k, 'type': 'text',})
+            if isinstance(v, (int, long)):
+                ftype = 'integer'
+            elif isinstance(v, (float)):
+                ftype = 'float'
+            else:
+                ftype = 'text'
+            fields.append({'name': k, 'type': ftype,})
         bundle = tr.build_bundle(request=request, data=dict(name=name, fields=fields))
         return tr.obj_create(bundle)
 
