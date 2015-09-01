@@ -17,7 +17,10 @@ class ModelDefinitionManager(MDManager):
 
 # TODO signals table_create & table_update
 class ModelDefinition(MD):
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=u'владелец')
+    created_date = models.DateTimeField(auto_now_add=True, null=True, blank=True, verbose_name=u'дата создания')
+    updated_date = models.DateTimeField(auto_now_add=True, auto_now=True, null=True, blank=True,
+                                        verbose_name=u'дата обновления')
 
     objects = ModelDefinitionManager()
 
