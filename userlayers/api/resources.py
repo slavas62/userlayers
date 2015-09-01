@@ -148,7 +148,7 @@ class TableProxyResource(Resource):
         if not user.is_superuser:
             lookup['owner'] = user
         try:
-            md = ModelDefinition.objects.get(**lookup).md
+            md = ModelDefinition.objects.get(**lookup)
         except ModelDefinition.DoesNotExist:
             return http.HttpNotFound()
 
