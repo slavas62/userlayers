@@ -26,8 +26,9 @@ from vectortools.reader import VectorReaderError
 from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
-from .forms import TableFromFileForm, FieldForm, FIELD_TYPES
+from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
+from tastypie.validation import FormValidation
 
 get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
@@ -76,6 +77,7 @@ class TablesResource(ModelResource):
     class Meta:
         queryset = ModelDefinition.objects.all()
         authorization = TableAuthorization()
+        validation = FormValidation(form_class=TableForm)
         fields = ['name']
     
     def fill_obj(self, bundle):
@@ -133,7 +135,7 @@ class TablesResource(ModelResource):
          
         # add geo field only on creating (not updating)
         if not bundle.obj.fielddefinitions.all():
-            Model = mutant.contrib.geo.models.GeometryFieldDefinition
+            Model = dict(GEOMETRY_FIELD_TYPES).get(bundle.data.get('geometry_type'), mutant.contrib.geo.models.GeometryFieldDefinition)
             obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
             bundle.data['fields'].append(Bundle(obj=obj))
          

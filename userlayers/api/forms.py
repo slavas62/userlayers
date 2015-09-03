@@ -1,6 +1,17 @@
 import mutant
 from django import forms
 
+GEOMETRY_FIELD_TYPES = (
+    ('geometry', mutant.contrib.geo.models.GeometryFieldDefinition),
+    ('point', mutant.contrib.geo.models.PointFieldDefinition),
+    ('multi_point', mutant.contrib.geo.models.MultiPointFieldDefinition),
+    ('line_string', mutant.contrib.geo.models.LineStringFieldDefinition),
+    ('multi_line_string', mutant.contrib.geo.models.MultiLineStringFieldDefinition),
+    ('polygon', mutant.contrib.geo.models.PolygonFieldDefinition),
+    ('multi_polygon', mutant.contrib.geo.models.MultiPolygonFieldDefinition),
+    ('geometry_collection', mutant.contrib.geo.models.GeometryCollectionFieldDefinition),
+)
+
 FIELD_TYPES = (
     ('text', mutant.contrib.text.models.TextFieldDefinition),
     ('varchar', mutant.contrib.text.models.CharFieldDefinition),
@@ -23,19 +34,10 @@ FIELD_TYPES = (
     ('email', mutant.contrib.web.models.EmailFieldDefinition),
     ('url', mutant.contrib.web.models.URLFieldDefinition),
 
-    ('geometry', mutant.contrib.geo.models.GeometryFieldDefinition),
-    ('point', mutant.contrib.geo.models.PointFieldDefinition),
-    ('multi_point', mutant.contrib.geo.models.MultiPointFieldDefinition),
-    ('line_string', mutant.contrib.geo.models.LineStringFieldDefinition),
-    ('multi_line_string', mutant.contrib.geo.models.MultiLineStringFieldDefinition),
-    ('polygon', mutant.contrib.geo.models.PolygonFieldDefinition),
-    ('multi_polygon', mutant.contrib.geo.models.MultiPolygonFieldDefinition),
-    ('geometry_collection', mutant.contrib.geo.models.GeometryCollectionFieldDefinition),
-
     ('date', mutant.contrib.temporal.models.DateFieldDefinition),
     ('time', mutant.contrib.temporal.models.TimeFieldDefinition),
     ('datetime', mutant.contrib.temporal.models.DateTimeFieldDefinition),
-)
+) + GEOMETRY_FIELD_TYPES
 
 class FieldForm(forms.ModelForm):
     type = forms.ChoiceField(choices=FIELD_TYPES)
@@ -51,3 +53,7 @@ class FieldForm(forms.ModelForm):
 class TableFromFileForm(forms.Form):
     file = forms.FileField()
     name = forms.CharField()
+
+class TableForm(forms.Form):
+    name = forms.CharField()
+    geometry_type = forms.ChoiceField(choices=GEOMETRY_FIELD_TYPES, required=False)
