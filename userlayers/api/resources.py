@@ -87,6 +87,7 @@ class TablesResource(ModelResource):
     class Meta:
         queryset = ModelDefinition.objects.all()
         authorization = TableAuthorization()
+        validation = FormValidation(form_class=TableForm)
         fields = ['name', 'verbose_name', 'verbose_name_plural']
 
     def dehydrate(self, bundle):
