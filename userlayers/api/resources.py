@@ -194,8 +194,8 @@ class TableProxyResource(Resource):
                 return url
         
             def serialize(self, request, data, format, options=None):
-#                 options = options or {}
-#                 options['geojson'] = True
+                options = options or {}
+                options['geometry_field'] = DEFAULT_MD_GEOMETRY_FIELD_NAME
                 return super(R, self).serialize(request, data, format, options)
             
             def obj_create(self, bundle, **kwargs):

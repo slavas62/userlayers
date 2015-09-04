@@ -31,13 +31,19 @@ class GeoJsonSerializer(Serializer):
                 if type(value)==type({}):
                     if 'type' in value.keys():
                         if value['type'] == 'GeometryCollection' or 'coordinates' in value.keys():
-                            f['geometry'] = value
+                            if f['geometry']:
+                                f['properties'][key] = value
+                            else:
+                                f['geometry'] = value
                             return
                     for k in value:
                         recurse(k, value[k])
                 else:
                     f['properties'][key] = value
           
+            geometry_field = options.get('geometry_field')
+            if geometry_field and geometry_field in obj:
+                recurse(geometry_field, obj.pop(geometry_field))
             for key, value in obj.iteritems():
                 recurse(key, value)
             return f
