@@ -106,10 +106,16 @@ class TablesResource(ModelResource):
             #hack for renaming
             bundle.obj.model_class(force_create=True)
         return super(TablesResource, self).save(bundle, *args, **kwargs)
+    
+    def _create_auto_fields(self, bundle):
+        Model = dict(GEOMETRY_FIELD_TYPES).get(bundle.data.get('geometry_type'), mutant.contrib.geo.models.GeometryFieldDefinition)
+        obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
+        bundle.data['fields'].append(Bundle(obj=obj))
         
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
         bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
+        self._create_auto_fields(bundle)
         UserToTable(md=bundle.obj, user=bundle.request.user).save()
         self.emit_created_signal(bundle)
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
@@ -129,13 +135,6 @@ class TablesResource(ModelResource):
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
-         
-        # add geo field only on creating (not updating)
-        if not bundle.obj.fielddefinitions.all():
-            Model = dict(GEOMETRY_FIELD_TYPES).get(bundle.data.get('geometry_type'), mutant.contrib.geo.models.GeometryFieldDefinition)
-            obj = Model(name='geometry', model_def = bundle.obj, null=True, blank=True)
-            bundle.data['fields'].append(Bundle(obj=obj))
-         
         return super(TablesResource, self).save_m2m(bundle)
     
     def dehydrate(self, bundle):
