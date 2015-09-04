@@ -64,10 +64,7 @@ class FieldsResource(ModelResource):
         
     def dehydrate(self, bundle):
         cls = bundle.obj.content_type.model_class()
-        if cls == mutant.contrib.geo.models.GeometryFieldDefinition:
-            f_type = 'geometry'
-        else:
-            f_type = dict((v,k) for k,v in FIELD_TYPES)[cls]
+        f_type = dict((v,k) for k,v in FIELD_TYPES)[cls]
         bundle.data['type'] = f_type
         return bundle
 
