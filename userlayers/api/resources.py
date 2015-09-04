@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
+from django.http.response import HttpResponse
 from django.contrib.gis.geos import GEOSGeometry, WKBWriter
 from django.contrib.gis.geos.error import GEOSException
 from django.db import transaction
@@ -17,7 +18,6 @@ from tastypie.authorization import Authorization
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
-from userlayers import AUTO_CREATE_MD_FIELDS, AUTO_CREATE_MD_GEOMETRY_FIELD
 from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable
 from vectortools.fsutils import TempDir
@@ -44,17 +44,7 @@ class FieldsResource(ModelResource):
         authorization = FieldAuthorization()
         validation = FieldValidation()
         fields = ['name']
-
-    def obj_delete(self, bundle, **kwargs):
-        if bundle.obj.name in AUTO_CREATE_MD_FIELDS:
-            raise BadRequest('"%s" field cannot be deleted' % bundle.obj.name)
-        super(FieldsResource, self).obj_delete(bundle, **kwargs)
-
-    def obj_update(self, bundle, **kwargs):
-        if bundle.obj.name in AUTO_CREATE_MD_FIELDS:
-            raise BadRequest('"%s" field cannot be updated' % bundle.obj.name)
-        super(FieldsResource, self).obj_update(bundle, **kwargs)
-
+    
     def hydrate(self, bundle):
         bundle = super(FieldsResource, self).hydrate(bundle)
         verbose_name = bundle.data['name']
@@ -74,11 +64,8 @@ class FieldsResource(ModelResource):
         
     def dehydrate(self, bundle):
         cls = bundle.obj.content_type.model_class()
-        bundle.data['type'] = dict((v, k) for k, v in FIELD_TYPES)[cls]
-        bundle.data['verbose_name'] = bundle.obj.verbose_name
-        bundle.data['help_text'] = bundle.obj.help_text
-        bundle.data['null'] = bundle.obj.null
-        bundle.data['blank'] = bundle.obj.blank
+        f_type = dict((v,k) for k,v in FIELD_TYPES)[cls]
+        bundle.data['type'] = f_type
         return bundle
 
 class TablesResource(ModelResource):
@@ -88,12 +75,8 @@ class TablesResource(ModelResource):
         queryset = ModelDefinition.objects.all()
         authorization = TableAuthorization()
         validation = FormValidation(form_class=TableForm)
-        fields = ['name', 'verbose_name', 'verbose_name_plural']
-
-    def dehydrate(self, bundle):
-        bundle.data['objects_uri'] = TableProxyResource().uri_for_table(bundle.obj.pk)
-        return bundle
-
+        fields = ['name']
+    
     def fill_obj(self, bundle):
         slug = translit_and_slugify(bundle.data['name'])
         bundle.obj.name = slug[:100]
@@ -104,7 +87,7 @@ class TablesResource(ModelResource):
             bundle.obj.db_table = table_name
             bundle.obj.model = table_name
             bundle.obj.object_name = table_name
-
+        
     def signal_payload(self, bundle):
         uri = self.get_resource_uri(bundle.obj)
         proxy_uri = TableProxyResource().uri_for_table(bundle.obj.pk)
@@ -123,17 +106,17 @@ class TablesResource(ModelResource):
             #hack for renaming
             bundle.obj.model_class(force_create=True)
         return super(TablesResource, self).save(bundle, *args, **kwargs)
+    
+    def _create_auto_fields(self, bundle):
+        Model = dict(GEOMETRY_FIELD_TYPES).get(
+            bundle.data.get('geometry_type'), mutant.contrib.geo.models.GeometryFieldDefinition)
+        obj = Model(name='geometry', model_def=bundle.obj, null=True, blank=True)
+        bundle.data['fields'].append(Bundle(obj=obj))
         
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
-        if ModelDefinition.objects.filter(name=bundle.data['name']).count():
-            raise BadRequest('Model "%s" already exists' % bundle.data['name'])
         bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
-        bundle.obj.model_class(force_create=True)
-        for fname, fdata in AUTO_CREATE_MD_FIELDS.items():
-            obj = fdata['class'](model_def=bundle.obj, name=fname, **fdata['args'])
-            obj.save()
-            bundle.data['fields'].append(Bundle(obj=obj))
+        self._create_auto_fields(bundle)
         UserToTable(md=bundle.obj, user=bundle.request.user).save()
         self.emit_created_signal(bundle)
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
@@ -152,10 +135,12 @@ class TablesResource(ModelResource):
 
     def save_m2m(self, bundle):
         for f in bundle.data['fields']:
-            if f.obj.name in AUTO_CREATE_MD_FIELDS:
-                raise BadRequest('"%s" field cannot be added' % f.obj.name)
             f.obj.model_def = bundle.obj
         return super(TablesResource, self).save_m2m(bundle)
+    
+    def dehydrate(self, bundle):
+        bundle.data['objects_uri'] = TableProxyResource().uri_for_table(bundle.obj.pk)
+        return bundle
 
 class TableProxyResource(Resource):
     pattern = r'^tablesdata/(?P<table_pk>\d+)/data'
@@ -163,7 +148,7 @@ class TableProxyResource(Resource):
     class Meta:
         resource_name = 'tablesdata'
         authorization = FullAccessForLoginedUsers()
-
+    
     def uri_for_table(self, table_pk):
         return reverse('api_dispatch_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name))
     
@@ -207,7 +192,7 @@ class TableProxyResource(Resource):
                     kw = self.resource_uri_kwargs(bundle_or_obj)
                     url += '%s%s' % (kw['pk'], trailing_slash())
                 return url
-
+        
             def serialize(self, request, data, format, options=None):
 #                 options = options or {}
 #                 options['geojson'] = True
