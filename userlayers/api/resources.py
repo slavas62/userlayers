@@ -20,6 +20,7 @@ from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable
+from userlayers import DEFAULT_MD_GEOMETRY_FIELD_NAME
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
@@ -110,7 +111,7 @@ class TablesResource(ModelResource):
     def _create_auto_fields(self, bundle):
         Model = dict(GEOMETRY_FIELD_TYPES).get(
             bundle.data.get('geometry_type'), mutant.contrib.geo.models.GeometryFieldDefinition)
-        obj = Model(name='geometry', model_def=bundle.obj, null=True, blank=True)
+        obj = Model(name=DEFAULT_MD_GEOMETRY_FIELD_NAME, model_def=bundle.obj, null=True, blank=True)
         bundle.data['fields'].append(Bundle(obj=obj))
         
     @transaction.atomic
