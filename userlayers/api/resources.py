@@ -137,6 +137,10 @@ class TablesResource(ModelResource):
             bundle.data['fields'].append(Bundle(obj=obj))
          
         return super(TablesResource, self).save_m2m(bundle)
+    
+    def dehydrate(self, bundle):
+        bundle.data['objects_uri'] = TableProxyResource().uri_for_table(bundle.obj.pk)
+        return bundle
 
 class TableProxyResource(Resource):
     pattern = r'^tablesdata/(?P<table_pk>\d+)/data'
