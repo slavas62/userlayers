@@ -257,13 +257,14 @@ class FileImportResource(Resource):
                     f['properties'][normalize_field_name(k)] = v
                     f['properties'].pop(k)
             obj = model_class(**f['properties'])
-            try:
-                obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
-            except GEOSException:
-                raise FileImportError(u'file contains wrong geometry')
-            if obj.geometry.hasz:
-                #force 3D to 2D geometry convertation
-                obj.geometry = WKBWriter().write(obj.geometry)
+            if f['geometry']:
+                try:
+                    obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
+                except GEOSException:
+                    raise FileImportError(u'file contains wrong geometry')
+                if obj.geometry.hasz:
+                    #force 3D to 2D geometry convertation
+                    obj.geometry = WKBWriter().write(obj.geometry)
             objects.append(obj)
         model_class.objects.bulk_create(objects)
 
