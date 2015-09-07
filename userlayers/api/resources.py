@@ -115,8 +115,8 @@ class TablesResource(ModelResource):
         
     @transaction.atomic
     def obj_create(self, bundle, **kwargs):
-        bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
         self._create_auto_fields(bundle)
+        bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
         UserToTable(md=bundle.obj, user=bundle.request.user).save()
         self.emit_created_signal(bundle)
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
