@@ -21,7 +21,7 @@ class GeoJsonSerializer(Serializer):
             f = {
               "type": "Feature",
               "properties": {},
-              "geometry": {}
+              "geometry": None,
             }
           
             def recurse(key, value):
@@ -43,7 +43,7 @@ class GeoJsonSerializer(Serializer):
           
             geometry_field = options.get('geometry_field')
             if geometry_field and geometry_field in obj:
-                recurse(geometry_field, obj.pop(geometry_field))
+                f['geometry'] = obj.pop(geometry_field)
             for key, value in obj.iteritems():
                 recurse(key, value)
             return f
