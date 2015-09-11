@@ -10,5 +10,5 @@ from django.test.utils import get_runner
 if __name__ == "__main__":
     TestRunner = get_runner(settings)
     test_runner = TestRunner()
-    failures = test_runner.run_tests(["tests"])
+    failures = test_runner.run_tests(["userlayers"])
     sys.exit(bool(failures))\
