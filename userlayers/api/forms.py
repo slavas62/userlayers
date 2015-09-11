@@ -1,4 +1,12 @@
-import mutant
+import mutant.models
+import mutant.contrib.text.models
+import mutant.contrib.geo.models
+import mutant.contrib.numeric.models
+import mutant.contrib.boolean.models
+import mutant.contrib.file.models
+import mutant.contrib.related.models
+import mutant.contrib.web.models
+import mutant.contrib.temporal.models
 from django import forms
 
 GEOMETRY_FIELD_TYPES = (
