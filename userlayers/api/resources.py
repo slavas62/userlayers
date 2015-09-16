@@ -234,9 +234,23 @@ class FileImportResource(Resource):
         detail_allowed_methods = []
         authorization = FullAccessForLoginedUsers()
 
+    def get_geometry_type(self, geometry_geojson):
+        type_map = {
+            'Point': 'point',
+            'MultiPoint': 'multi_point',
+            'LineString': 'line_string',
+            'MultiLineString': 'multi_line_string',
+            'Polygon': 'polygon',
+            'MultiPolygon': 'multi_polygon',
+            'GeometryCollection': 'geometry_collection',
+        }
+        return type_map.get(geometry_geojson['type'])
+
     def create_table(self, request, name, geojson_data):
         tr = TablesResource()
-        props = geojson_data['features'][0]['properties']
+        feature = geojson_data['features'][0]
+        props = feature['properties']
+        geom_type = self.get_geometry_type(feature['geometry'])
         fields = []
         for k, v in props.iteritems():
             if isinstance(v, (int, long)):
@@ -246,7 +260,7 @@ class FileImportResource(Resource):
             else:
                 ftype = 'text'
             fields.append({'name': k, 'type': ftype,})
-        bundle = tr.build_bundle(request=request, data=dict(name=name, fields=fields))
+        bundle = tr.build_bundle(request=request, data=dict(name=name, geometry_type=geom_type, fields=fields))
         return tr.obj_create(bundle)
 
     def fill_table(self, model_class, geojson_data):
