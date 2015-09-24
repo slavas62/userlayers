@@ -13,6 +13,8 @@ def get_db_table_name(user, name):
 
 def normalize_field_name(name):
     new_name = translit_and_slugify(name).replace('-', '_')
+    if new_name[0].isdigit():
+        new_name = u'_' + new_name
     if new_name == 'id':
         new_name = 'id_'
     return new_name

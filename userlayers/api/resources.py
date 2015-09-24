@@ -49,7 +49,6 @@ class FieldsResource(ModelResource):
     def hydrate(self, bundle):
         bundle = super(FieldsResource, self).hydrate(bundle)
         verbose_name = bundle.data['name']
-        bundle.data['name'] = normalize_field_name(bundle.data['name'])
         form = FieldForm(bundle.data)
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(bundle.request, form.errors))

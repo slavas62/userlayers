@@ -8,6 +8,7 @@ import mutant.contrib.related.models
 import mutant.contrib.web.models
 import mutant.contrib.temporal.models
 from django import forms
+from .naming import normalize_field_name
 
 GEOMETRY_FIELD_TYPES = (
     ('geometry', mutant.contrib.geo.models.GeometryFieldDefinition),
@@ -56,10 +57,7 @@ class FieldForm(forms.ModelForm):
         fields = ['name']
 
     def clean_name(self):
-        name = self.cleaned_data['name']
-        if name and name[0].isdigit():
-            return u'_' + self.cleaned_data['name']
-        return name
+        return normalize_field_name(self.cleaned_data['name'])
 
     def clean_table(self):
         return self.cleaned_data['table'] or None 
