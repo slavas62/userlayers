@@ -55,6 +55,12 @@ class FieldForm(forms.ModelForm):
         model = mutant.models.FieldDefinition
         fields = ['name']
 
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        if name and name[0].isdigit():
+            return u'_' + self.cleaned_data['name']
+        return name
+
     def clean_table(self):
         return self.cleaned_data['table'] or None 
 
