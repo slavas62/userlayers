@@ -12,7 +12,7 @@ def get_db_table_name(user, name):
     return 'userlayer_%s_%s' % (user.pk, uuid.uuid1())
 
 def normalize_field_name(name):
-    new_name = translit_and_slugify(name)
+    new_name = translit_and_slugify(name).replace('-', '_')
     if new_name == 'id':
         new_name = 'id_'
     return new_name
