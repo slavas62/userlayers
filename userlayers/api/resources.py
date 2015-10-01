@@ -233,7 +233,7 @@ class FileImportResource(Resource):
         detail_allowed_methods = []
         authorization = FullAccessForLoginedUsers()
 
-    def get_geometry_type(self, geometry_geojson):
+    def get_geometry_type(self, geojson_data):
         type_map = {
             'Point': 'point',
             'MultiPoint': 'multi_point',
@@ -243,13 +243,23 @@ class FileImportResource(Resource):
             'MultiPolygon': 'multi_polygon',
             'GeometryCollection': 'geometry_collection',
         }
-        return type_map.get(geometry_geojson['type'])
+        types = []
+        for f in geojson_data['features']:
+            t = f['geometry']['type']
+            if t not in types:
+                types.append(t)
+        if len(types) == 1:
+            geom_type = type_map.get(types[0])
+        else:
+            geom_type = 'geometry'
+        
+        return geom_type
 
     def create_table(self, request, name, geojson_data):
         tr = TablesResource()
         feature = geojson_data['features'][0]
         props = feature['properties']
-        geom_type = self.get_geometry_type(feature['geometry'])
+        geom_type = self.get_geometry_type(geojson_data)
         fields = []
         for k, v in props.iteritems():
             if isinstance(v, (int, long)):
