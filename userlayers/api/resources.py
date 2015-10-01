@@ -154,19 +154,7 @@ class TableProxyResource(Resource):
     def get_resource_uri(self, *args, **kwargs):
         return self.uri_for_table(self.table_pk)
     
-    def dispatch(self, request_type, request, **kwargs):
-        self.table_pk = kwargs.pop('table_pk')
-        user = getattr(request, 'user', None)
-        if not user or user.is_anonymous():
-            return http.HttpNotFound()
-        lookup = dict(md__pk=self.table_pk)
-        if not user.is_superuser:
-            lookup['user'] = user
-        try:
-            md = UserToTable.objects.get(**lookup).md
-        except UserToTable.DoesNotExist:
-            return http.HttpNotFound()
-        
+    def generate_resource_class(self, md):
         proxy = self
         
         class R(ModelResource):
@@ -211,6 +199,22 @@ class TableProxyResource(Resource):
                 super(R, self).obj_delete(bundle, **kwargs)
                 self.logger.info('"%s" deleted table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
         
+        return R
+    
+    def dispatch(self, request_type, request, **kwargs):
+        self.table_pk = kwargs.pop('table_pk')
+        user = getattr(request, 'user', None)
+        if not user or user.is_anonymous():
+            return http.HttpNotFound()
+        lookup = dict(md__pk=self.table_pk)
+        if not user.is_superuser:
+            lookup['user'] = user
+        try:
+            md = UserToTable.objects.get(**lookup).md
+        except UserToTable.DoesNotExist:
+            return http.HttpNotFound()
+        
+        R = self.generate_resource_class(md)
         return R().dispatch(request_type, request, **kwargs)
     
     def base_urls(self):
