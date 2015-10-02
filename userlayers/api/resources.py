@@ -30,6 +30,7 @@ from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldA
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
 from tastypie.validation import FormValidation
+from userlayers.render import Renderer
 
 get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
@@ -139,6 +140,7 @@ class TablesResource(ModelResource):
     
     def dehydrate(self, bundle):
         bundle.data['objects_uri'] = TableProxyResource().uri_for_table(bundle.obj.pk)
+        bundle.data['tiles_uri_template'] = XYZResource().tiles_uri_template(bundle.obj.pk)
         return bundle
 
 class TableProxyResource(Resource):
@@ -224,6 +226,29 @@ class TableProxyResource(Resource):
             
             url(r"%s%s$" % (self.pattern, trailing_slash()), self.wrap_view('dispatch_list'), name="api_dispatch_list"),
             url(r"%s/(?P<%s>.*?)%s$" % (self.pattern, self._meta.detail_uri_name, trailing_slash()), self.wrap_view('dispatch_detail'), name="api_dispatch_detail"),
+        ]
+
+class XYZResource(TableProxyResource):
+    pattern = r'^tablesdata/(?P<table_pk>\d+)/tiles/(?P<x>\d+)/(?P<y>\d+)/(?P<z>\d+)'
+    
+    class Meta(TableProxyResource.Meta):
+        allowed_methods = ['get']
+        resource_name = 'tiles'
+    
+    def tiles_uri_template(self, table_pk):
+        tile_uri = reverse('api_tiles', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name, x=1, y=2, z=3))
+        return tile_uri.replace('/1/2/3/', '/{x}/{y}/{z}/')
+    
+    def generate_resource_class(self, md):
+        class R(Resource):
+            def get_list(self, request, x, y, z, **kwargs):
+                tile = Renderer(md).render_tile(x, y, z)
+                return HttpResponse(tile, content_type='image/png')
+        return R
+    
+    def base_urls(self):
+        return [
+            url(r"%s%s$" % (self.pattern, trailing_slash()), self.wrap_view('dispatch_list'), name="api_tiles"),
         ]
 
 class FileImportError(Exception):
