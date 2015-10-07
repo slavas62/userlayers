@@ -12,6 +12,7 @@ setup(
         'transliterate == 1.7.3',
         'vectortools == 0.0.1',
         'shapeutils == 0.0.1',
+        'mapnik >= 0.1',
     ],
     dependency_links = [
         'https://bitbucket.org/lighter/vectortools/get/dc38815.zip#egg=vectortools-0.0.1',
