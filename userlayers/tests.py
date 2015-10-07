@@ -45,3 +45,27 @@ class FieldApiTests(TableMixin, ResourceTestCase):
         location = resp.get('Location')
         self.api_client.delete(location)
         self.assertHttpNotFound(self.api_client.get(location))
+
+class TableDataTests(TableMixin, ResourceTestCase):
+    
+    def get_object_uri(self):
+        resp = self.api_client.get(self.create_table())
+        data = self.deserialize(resp)
+        objects_uri = data['objects_uri']
+        payload = {'name': 'foo', 'value': 5, 'is_ok': True}
+        resp = self.api_client.post(objects_uri, data=payload)
+        self.assertHttpCreated(resp)
+        self.assertTrue(resp.has_header('Location'))
+        location = resp.get('Location')
+        return location
+    
+    def test_create_delete_entry(self):
+        location = self.get_object_uri()
+        self.api_client.delete(location)
+        self.assertHttpNotFound(self.api_client.get(location))
+
+    def test_shapefile_export(self):
+        location = self.get_object_uri()
+        resp = self.api_client.get(location, data={'format': 'shapefile'})
+        self.assertHttpOK(resp)
+        self.assertTrue('application/zip' in resp.get('Content-Type'))
