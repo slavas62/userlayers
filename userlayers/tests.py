@@ -1,9 +1,8 @@
 from django.contrib.auth import get_user_model
 from tastypie.test import ResourceTestCase
-from userlayers.api.resources import TablesResource
+from userlayers.api.resources import TablesResource, FieldsResource
 
-class TableApiTests(ResourceTestCase):
-    
+class TableMixin(object):
     uri = TablesResource().get_resource_uri()
     
     def create_user_and_login(self):
@@ -19,8 +18,10 @@ class TableApiTests(ResourceTestCase):
         return resp.get('Location')
     
     def setUp(self):
-        super(TableApiTests, self).setUp()
+        super(TableMixin, self).setUp()
         self.create_user_and_login()
+
+class TableApiTests(TableMixin, ResourceTestCase):
     
     def test_create_delete_table(self):
         location = self.create_table()
@@ -30,3 +31,17 @@ class TableApiTests(ResourceTestCase):
 
     def test_get_table_list(self):
         self.assertValidJSONResponse(self.api_client.get(self.uri))
+
+class FieldApiTests(TableMixin, ResourceTestCase):
+     
+    fields_uri = FieldsResource().get_resource_uri()
+ 
+    def test_create_delete_field(self):
+        table = self.create_table()
+        payload = {'name': 'somefield', 'type': 'text', 'table': table}
+        resp = self.api_client.post(self.fields_uri, data=payload)
+        self.assertHttpCreated(resp)
+        self.assertTrue(resp.has_header('Location'))
+        location = resp.get('Location')
+        self.api_client.delete(location)
+        self.assertHttpNotFound(self.api_client.get(location))
