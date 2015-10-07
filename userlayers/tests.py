@@ -14,18 +14,18 @@ class TableApiTests(ResourceTestCase):
     def create_table(self):
         payload = {"name": "foo", "fields": [{"name": "display_name", "type": "text"}, {"name": "value", "type": "integer"}, {"name": "is_ok", "type": "boolean"}]}
         resp = self.api_client.post(self.uri, data=payload)
-        return resp
+        self.assertHttpCreated(resp)
+        self.assertTrue(resp.has_header('Location'))
+        return resp.get('Location')
     
     def setUp(self):
         super(TableApiTests, self).setUp()
         self.create_user_and_login()
     
     def test_create_delete_table(self):
-        resp = self.create_table()
-        self.assertHttpCreated(resp)
-        location = resp.get('Location')
+        location = self.create_table()
         self.assertValidJSONResponse(self.api_client.get(location))
-        self.api_client.delete(resp.get('Location'))
+        self.api_client.delete(location)
         self.assertHttpNotFound(self.api_client.get(location))
 
     def test_get_table_list(self):
