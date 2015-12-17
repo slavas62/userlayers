@@ -26,7 +26,7 @@ from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
 from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
-from .authorization import FullAccessForLoginedUsers, TableAuthorization, FieldAuthorization
+from .authorization import FullAccessForLoginedUsers, get_table_auth, get_field_auth
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
 from tastypie.validation import FormValidation
@@ -42,7 +42,7 @@ class FieldsResource(ModelResource):
     
     class Meta:
         queryset = FieldDefinition.objects.all()
-        authorization = FieldAuthorization()
+        authorization = get_field_auth()()
         validation = FieldValidation()
         fields = ['name']
     
@@ -73,7 +73,7 @@ class TablesResource(ModelResource):
     
     class Meta:
         queryset = ModelDefinition.objects.all()
-        authorization = TableAuthorization()
+        authorization = get_table_auth()()
         validation = FormValidation(form_class=TableForm)
         fields = ['name']
     
@@ -157,16 +157,13 @@ class TableProxyResource(Resource):
     def dispatch(self, request_type, request, **kwargs):
         self.table_pk = kwargs.pop('table_pk')
         user = getattr(request, 'user', None)
-        if not user or user.is_anonymous():
-            return http.HttpNotFound()
-        lookup = dict(md__pk=self.table_pk)
-        if not user.is_superuser:
-            lookup['user'] = user
-        try:
-            md = UserToTable.objects.get(**lookup).md
-        except UserToTable.DoesNotExist:
+
+        md_qs = ModelDefinition.objects.filter(pk=self.table_pk)
+        
+        if not get_table_auth()().filter_for_user(md_qs, user):
             return http.HttpNotFound()
         
+        md = md_qs[0]
         proxy = self
         
         class R(ModelResource):
