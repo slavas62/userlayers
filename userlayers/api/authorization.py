@@ -74,3 +74,15 @@ def get_field_auth():
             md_list = super(FieldAuthorization, self).filter_for_user(ModelDefinition.objects.all(), user)
             return object_list.filter(model_def__in=md_list)
     return FieldAuthorization
+
+def get_table_data_auth():
+    class TableDataAuthorization(get_table_auth()):
+        def filter_for_user(self, object_list, user):
+            if not object_list:
+                return object_list
+            md = ModelDefinition.objects.filter(pk=type(object_list[0]).definition().pk)
+            if super(TableDataAuthorization, self).filter_for_user(md, user):
+                return object_list
+            else:
+                return []
+    return TableDataAuthorization

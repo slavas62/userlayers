@@ -26,7 +26,7 @@ from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
 from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
-from .authorization import FullAccessForLoginedUsers, get_table_auth, get_field_auth
+from .authorization import FullAccessForLoginedUsers, get_table_auth, get_field_auth, get_table_data_auth
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
 from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
 from tastypie.validation import FormValidation
@@ -171,7 +171,7 @@ class TableProxyResource(Resource):
             
             class Meta:
                 queryset = md.model_class().objects.all()
-                authorization = Authorization()
+                authorization = get_table_data_auth()()
                 serializer = GeoJsonSerializer()
                 max_limit = None
         
