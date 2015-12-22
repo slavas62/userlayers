@@ -160,7 +160,7 @@ class TableProxyResource(Resource):
 
         md_qs = ModelDefinition.objects.filter(pk=self.table_pk)
         
-        if not get_table_auth()().filter_for_user(md_qs, user):
+        if not get_table_auth()().check_list_view(md_qs, self.build_bundle(request=request)):
             return http.HttpNotFound()
         
         md = md_qs[0]
