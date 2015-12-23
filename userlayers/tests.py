@@ -5,8 +5,8 @@ from userlayers.api.resources import TablesResource, FieldsResource
 class TableMixin(object):
     uri = TablesResource().get_resource_uri()
     
-    def create_user_and_login(self):
-        credentials = dict(username='admin', password='admin')
+    def create_user_and_login(self, username='user'):
+        credentials = dict(username=username, password='password')
         get_user_model().objects.create_user(**credentials)
         self.api_client.client.login(**credentials)
 
@@ -16,6 +16,17 @@ class TableMixin(object):
         self.assertHttpCreated(resp)
         self.assertTrue(resp.has_header('Location'))
         return resp.get('Location')
+    
+    def get_object_uri(self):
+        resp = self.api_client.get(self.create_table())
+        data = self.deserialize(resp)
+        objects_uri = data['objects_uri']
+        payload = {'name': 'foo', 'value': 5, 'is_ok': True}
+        resp = self.api_client.post(objects_uri, data=payload)
+        self.assertHttpCreated(resp)
+        self.assertTrue(resp.has_header('Location'))
+        location = resp.get('Location')
+        return location
     
     def setUp(self):
         super(TableMixin, self).setUp()
@@ -48,17 +59,6 @@ class FieldApiTests(TableMixin, ResourceTestCase):
 
 class TableDataTests(TableMixin, ResourceTestCase):
     
-    def get_object_uri(self):
-        resp = self.api_client.get(self.create_table())
-        data = self.deserialize(resp)
-        objects_uri = data['objects_uri']
-        payload = {'name': 'foo', 'value': 5, 'is_ok': True}
-        resp = self.api_client.post(objects_uri, data=payload)
-        self.assertHttpCreated(resp)
-        self.assertTrue(resp.has_header('Location'))
-        location = resp.get('Location')
-        return location
-    
     def test_create_delete_entry(self):
         location = self.get_object_uri()
         self.api_client.delete(location)
@@ -69,3 +69,14 @@ class TableDataTests(TableMixin, ResourceTestCase):
         resp = self.api_client.get(location, data={'format': 'shapefile'})
         self.assertHttpOK(resp)
         self.assertTrue('application/zip' in resp.get('Content-Type'))
+
+class AuthorizationTests(TableMixin, ResourceTestCase):
+    def test_table_access(self):
+        location = self.create_table()
+        self.create_user_and_login('user2')
+        self.assertHttpUnauthorized(self.api_client.get(location))
+        
+    def test_table_data_access(self):
+        location = self.get_object_uri()
+        self.create_user_and_login('user2')
+        self.assertHttpUnauthorized(self.api_client.get(location))

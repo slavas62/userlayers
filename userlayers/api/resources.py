@@ -116,7 +116,6 @@ class TablesResource(ModelResource):
     def obj_create(self, bundle, **kwargs):
         self._create_auto_fields(bundle)
         bundle = super(TablesResource, self).obj_create(bundle, **kwargs)
-        UserToTable(md=bundle.obj, user=bundle.request.user).save()
         self.emit_created_signal(bundle)
         logger.info('"%s" created table "%s"' % (bundle.request.user, bundle.obj.db_table))
         return bundle
@@ -133,6 +132,10 @@ class TablesResource(ModelResource):
         logger.info('"%s" removed table "%s"' % (bundle.request.user, bundle.obj.db_table))
 
     def save_m2m(self, bundle):
+        #This is only place for create UserToTable entry. Because we need to do it after save MD, but before save m2m (fields),
+        #because fields authorization checks UserToTable entry
+        UserToTable(md=bundle.obj, user=bundle.request.user).save()
+        
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
         return super(TablesResource, self).save_m2m(bundle)
@@ -156,14 +159,11 @@ class TableProxyResource(Resource):
     
     def dispatch(self, request_type, request, **kwargs):
         self.table_pk = kwargs.pop('table_pk')
-        user = getattr(request, 'user', None)
-
-        md_qs = ModelDefinition.objects.filter(pk=self.table_pk)
-        
-        if not get_table_auth()().check_list_view(md_qs, self.build_bundle(request=request)):
+        try:
+            md = ModelDefinition.objects.get(pk=self.table_pk)
+        except ModelDefinition.DoesNotExist:
             return http.HttpNotFound()
         
-        md = md_qs[0]
         proxy = self
         
         class R(ModelResource):
@@ -171,7 +171,7 @@ class TableProxyResource(Resource):
             
             class Meta:
                 queryset = md.model_class().objects.all()
-                authorization = get_table_data_auth()()
+                authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None
         
