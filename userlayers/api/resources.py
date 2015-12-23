@@ -134,7 +134,7 @@ class TablesResource(ModelResource):
     def save_m2m(self, bundle):
         #This is only place for create UserToTable entry. Because we need to do it after save MD, but before save m2m (fields),
         #because fields authorization checks UserToTable entry
-        UserToTable(md=bundle.obj, user=bundle.request.user).save()
+        UserToTable.objects.get_or_create(md=bundle.obj, user=bundle.request.user)
         
         for f in bundle.data['fields']:
             f.obj.model_def = bundle.obj
