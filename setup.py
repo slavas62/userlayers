@@ -13,7 +13,7 @@ setup(
         'shapeutils == 0.0.1',
     ],
     dependency_links = [
-        'https://github.com/charettes/django-mutant/archive/b3d75fb.zip#egg=django-mutant-0.2.0a',
+        'https://github.com/charettes/django-mutant/archive/83a09a6.zip#egg=django-mutant-0.2.0a',
         'https://bitbucket.org/lighter/shape-utils/get/eec0952.zip#egg=shapeutils-0.0.1',
     ],
 )
