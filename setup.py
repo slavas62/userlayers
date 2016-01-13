@@ -8,7 +8,7 @@ setup(
     install_requires=[
         'django-mutant == 0.1.2',
         'django-polymodels==1.2.3',
-        'django-tastypie >= 0.12.0',
+        'django-tastypie >=0.12.0, <0.13.0',
         'transliterate == 1.7.3',
         'vectortools == 0.0.1',
         'shapeutils == 0.0.1',
