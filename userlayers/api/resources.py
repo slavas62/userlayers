@@ -31,6 +31,8 @@ from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETR
 from .naming import translit_and_slugify, get_db_table_name, normalize_field_name
 from tastypie.validation import FormValidation
 
+from dbtables.apps import DBTablesConfig as tables_app
+
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
 
 logger = logging.getLogger('userlayers.api.schema')
@@ -79,7 +81,7 @@ class TablesResource(ModelResource):
     def fill_obj(self, bundle):
         slug = translit_and_slugify(bundle.data['name'])
         bundle.obj.verbose_name = bundle.data['name']
-        bundle.obj.app_label = 'userlayers'
+        bundle.obj.app_label = tables_app.name
         if not bundle.obj.db_table:
             table_name = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
             bundle.obj.db_table = table_name
