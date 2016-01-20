@@ -272,10 +272,9 @@ class FileImportResource(Resource):
     def fill_table(self, model_class, geojson_data):
         objects = []
         for f in geojson_data['features']:
-            for k, v in f['properties'].iteritems():
+            for k in f['properties'].keys():
                 if normalize_field_name(k) != k:
-                    f['properties'][normalize_field_name(k)] = v
-                    f['properties'].pop(k)
+                    f['properties'][normalize_field_name(k)] = f['properties'].pop(k)
             obj = model_class(**f['properties'])
             if f['geometry']:
                 try:
