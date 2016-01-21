@@ -20,7 +20,7 @@ from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable
-from userlayers import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOMETRY_FIELD_TYPE
+from userlayers.settings import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOMETRY_FIELD_TYPE
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError

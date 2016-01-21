@@ -7,7 +7,7 @@ setup(
     long_description=open('README.md').read(),
     install_requires=[
         'django-mutant == 0.2',
-        'django-tastypie >= 0.12.0, <0.13.0',
+        'django-tastypie >= 0.13.0',
         'transliterate == 1.7.3',
         'vectortools == 0.0.4',
         'shapeutils == 0.0.1',
