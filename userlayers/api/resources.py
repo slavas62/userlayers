@@ -20,7 +20,7 @@ from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable
-from userlayers import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOMETRY_FIELD_TYPE
+from userlayers.settings import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOMETRY_FIELD_TYPE
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
@@ -28,10 +28,11 @@ from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, get_table_auth, get_field_auth, get_table_data_auth
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
-from .naming import translit_and_slugify, get_app_label_for_user, get_db_table_name, normalize_field_name
+from .naming import translit_and_slugify, get_db_table_name, normalize_field_name
 from tastypie.validation import FormValidation
 
-get_app_label_for_user = getattr(settings, 'USERLAYERS_APP_LABEL_GENERATOR', get_app_label_for_user)
+from dbtables.apps import DBTablesConfig as tables_app
+
 get_db_table_name = getattr(settings, 'USERLAYERS_DB_TABLE_GENERATOR', get_db_table_name)
 
 logger = logging.getLogger('userlayers.api.schema')
@@ -79,9 +80,8 @@ class TablesResource(ModelResource):
     
     def fill_obj(self, bundle):
         slug = translit_and_slugify(bundle.data['name'])
-        bundle.obj.name = slug[:100]
         bundle.obj.verbose_name = bundle.data['name']
-        bundle.obj.app_label = get_app_label_for_user(bundle.request.user)[:100]
+        bundle.obj.app_label = tables_app.name
         if not bundle.obj.db_table:
             table_name = get_db_table_name(bundle.request.user, bundle.data['name'])[:63]
             bundle.obj.db_table = table_name

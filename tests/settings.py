@@ -8,6 +8,11 @@ DATABASES = {
 
 SECRET_KEY = 'fake-key'
 
+MIDDLEWARE_CLASSES = [
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+]
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -23,9 +28,8 @@ INSTALLED_APPS = [
     'mutant.contrib.text',
     'mutant.contrib.web',
     
-    'south',
-    
     'userlayers',
+    'dbtables',
     
     'tests',
 ]

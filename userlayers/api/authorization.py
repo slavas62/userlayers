@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.utils.module_loading import import_by_path
+from django.utils.module_loading import import_string
 from mutant.models.model import ModelDefinition
 from userlayers.models import UserToTable
 from mutant.models.field import FieldDefinition
@@ -68,7 +68,7 @@ def get_table_auth():
     custom_table_auth = getattr(settings, 'USERLAYERS_TABLE_AUTHORIZATION', None)
  
     if custom_table_auth:
-        return import_by_path(custom_table_auth)
+        return import_string(custom_table_auth)
     
     return TableAuthorization
 
