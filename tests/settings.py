@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'mutant.contrib.web',
     
     'userlayers',
+    'dbtables',
     
     'tests',
 ]
