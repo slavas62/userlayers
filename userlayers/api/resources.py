@@ -299,6 +299,8 @@ class FileImportResource(Resource):
             if not not_empty_layers:
                 raise FileImportError(u'file does not contain any features')
             geojson_data = not_empty_layers[0]
+            for l in not_empty_layers[1:]:
+                geojson_data['features'].extend(l['features'])
         except VectorReaderError:
             raise FileImportError(u'wrong file format')
         bundle = self.create_table(request, name, geojson_data)
