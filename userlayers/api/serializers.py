@@ -17,6 +17,9 @@ class GeoJsonSerializer(Serializer):
         """
         Given some Python data, produces GeoJSON output.
         """
+        options = options or {}
+        process_value = options.get('process_value', lambda x: x)
+
         def _build_feature(obj):
             f = {
               "type": "Feature",
@@ -32,14 +35,14 @@ class GeoJsonSerializer(Serializer):
                     if 'type' in value.keys():
                         if value['type'] == 'GeometryCollection' or 'coordinates' in value.keys():
                             if f['geometry']:
-                                f['properties'][key] = value
+                                f['properties'][key] = process_value(value)
                             else:
                                 f['geometry'] = value
                             return
                     for k in value:
                         recurse(k, value[k])
                 else:
-                    f['properties'][key] = value
+                    f['properties'][key] = process_value(value)
           
             geometry_field = options.get('geometry_field')
             if geometry_field and geometry_field in obj:
@@ -76,4 +79,13 @@ class GeoJsonSerializer(Serializer):
         return json.json.dumps(data, cls=json.DjangoJSONEncoder, sort_keys=True, ensure_ascii=False)   
     
     def to_shapefile(self, data, options=None):
+        options = options or {}
+        size = options.pop('size', 254)
+        encoding = options.pop('encoding', 'utf8')
+
+        def trunc_value(value, size=size, encoding=encoding):
+            encoded = value.encode(encoding)[:size]
+            return encoded.decode(encoding, 'ignore')
+
+        options.update({'process_value': trunc_value})
         return geojson_to_zipshape(self.to_geojson(data, options))
