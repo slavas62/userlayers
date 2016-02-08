@@ -84,8 +84,11 @@ class GeoJsonSerializer(Serializer):
         encoding = options.pop('encoding', 'utf8')
 
         def trunc_value(value, size=size, encoding=encoding):
-            encoded = value.encode(encoding)[:size]
-            return encoded.decode(encoding, 'ignore')
+            if isinstance(value, basestring):
+                encoded = value.encode(encoding)[:size]
+                return encoded.decode(encoding, 'ignore')
+            else:
+                return value
 
         options.update({'process_value': trunc_value})
         return geojson_to_zipshape(self.to_geojson(data, options))
