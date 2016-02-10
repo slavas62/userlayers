@@ -54,13 +54,14 @@ class FieldsResource(ModelResource):
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(bundle.request, form.errors))
         bundle.data = form.cleaned_data
-        model = dict(FIELD_TYPES)[bundle.data['type']]
-        if not isinstance(bundle.obj, model):
-            self._meta.object_class = model
-            bundle.obj = model()
-        bundle.obj.null = True
-        bundle.obj.blank = True
-        bundle.obj.verbose_name = verbose_name
+        if not bundle.obj.pk:
+            model = dict(FIELD_TYPES)[bundle.data['type']]
+            if not isinstance(bundle.obj, model):
+                self._meta.object_class = model
+                bundle.obj = model()
+            bundle.obj.null = True
+            bundle.obj.blank = True
+            bundle.obj.verbose_name = verbose_name
         return bundle
         
     def dehydrate(self, bundle):
