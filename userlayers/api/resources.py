@@ -15,6 +15,7 @@ from tastypie.contrib.gis.resources import ModelResource
 from tastypie import fields, http
 from tastypie.bundle import Bundle
 from tastypie.authorization import Authorization
+from tastypie.authentication import SessionAuthentication
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
@@ -44,6 +45,7 @@ class FieldsResource(ModelResource):
     class Meta:
         queryset = FieldDefinition.objects.all()
         authorization = get_field_auth()()
+        authentication = SessionAuthentication()
         validation = FieldValidation()
         fields = ['name']
     
@@ -76,6 +78,7 @@ class TablesResource(ModelResource):
     class Meta:
         queryset = ModelDefinition.objects.all()
         authorization = get_table_auth()()
+        authentication = SessionAuthentication()
         validation = FormValidation(form_class=TableForm)
         fields = ['name']
     
