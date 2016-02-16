@@ -154,6 +154,7 @@ class TableProxyResource(Resource):
     class Meta:
         resource_name = 'tablesdata'
         authorization = FullAccessForLoginedUsers()
+        authentication = SessionAuthentication()
     
     def uri_for_table(self, table_pk):
         return reverse('api_dispatch_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name))
@@ -233,6 +234,7 @@ class FileImportResource(Resource):
         list_allowed_methods = ['post']
         detail_allowed_methods = []
         authorization = FullAccessForLoginedUsers()
+        authentication = SessionAuthentication()
 
     def get_geometry_type(self, geojson_data):
         type_map = {
