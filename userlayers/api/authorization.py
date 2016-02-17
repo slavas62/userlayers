@@ -78,7 +78,7 @@ def get_field_auth():
             method = 'check_list_%s' % operation
             md_list = getattr(get_table_auth()(), method)(ModelDefinition.objects.all(), user)
             field_list = [o.pk for o in object_list] if type(object_list) is list else object_list
-            return FieldDefinition.objects.filter(pk__in=field_list, model_def__in=md_list)
+            return FieldDefinition.objects.select_subclasses().filter(pk__in=field_list, model_def__in=md_list)
         
         def check_list_modify(self, object_list, user):
             return self.check_table_access('modify', object_list, user)
