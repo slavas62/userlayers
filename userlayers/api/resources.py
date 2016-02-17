@@ -73,6 +73,7 @@ class FieldsResource(ModelResource):
         return bundle
 
 class TablesResource(ModelResource):
+    name = fields.ApiField('verbose_name')
     fields = fields.ToManyField(FieldsResource, 'fielddefinitions', related_name='table', full=True)
     
     class Meta:
