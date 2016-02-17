@@ -1,3 +1,4 @@
+import json
 from django.contrib.auth import get_user_model
 from tastypie.test import ResourceTestCase
 from userlayers.api.resources import TablesResource, FieldsResource
@@ -46,16 +47,30 @@ class TableApiTests(TableMixin, ResourceTestCase):
 class FieldApiTests(TableMixin, ResourceTestCase):
      
     fields_uri = FieldsResource().get_resource_uri()
- 
-    def test_create_delete_field(self):
+
+    def add_field(self):
         table = self.create_table()
         payload = {'name': 'somefield', 'type': 'text', 'table': table}
         resp = self.api_client.post(self.fields_uri, data=payload)
         self.assertHttpCreated(resp)
         self.assertTrue(resp.has_header('Location'))
         location = resp.get('Location')
-        self.api_client.delete(location)
+        return location
+ 
+    def test_create_delete_field(self):
+        location = self.add_field()
+        resp = self.api_client.delete(location)
         self.assertHttpNotFound(self.api_client.get(location))
+
+    def test_rename_field(self):
+        location = self.add_field()
+        newfieldname = 'newfieldname'
+        payload = {'name': newfieldname}
+        resp = self.api_client.patch(location, data=payload)
+        self.assertIn(resp.status_code, [202, 204])
+        resp = self.api_client.get(location)
+        self.assertValidJSONResponse(resp)
+        self.assertEqual(newfieldname, json.loads(resp.content).get('name'))
 
 class TableDataTests(TableMixin, ResourceTestCase):
     
