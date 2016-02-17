@@ -43,7 +43,7 @@ class FieldsResource(ModelResource):
     table = fields.ToOneField('userlayers.api.resources.TablesResource', 'model_def')
     
     class Meta:
-        queryset = FieldDefinition.objects.select_subclasses()
+        queryset = FieldDefinition.objects.all()
         authorization = get_field_auth()()
         authentication = SessionAuthentication()
         validation = FieldValidation()

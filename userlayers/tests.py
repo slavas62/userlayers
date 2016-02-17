@@ -43,7 +43,16 @@ class TableApiTests(TableMixin, ResourceTestCase):
 
     def test_get_table_list(self):
         self.assertValidJSONResponse(self.api_client.get(self.uri))
-
+        
+    def test_table_rename(self):
+        table = self.create_table()
+        newtablename = 'newtablename'
+        payload = {'name': newtablename}
+        resp = self.api_client.patch(table, data=payload)
+        self.assertIn(resp.status_code, [202, 204])
+        resp = self.api_client.get(table)
+        self.assertEqual(newtablename, json.loads(resp.content).get('name'))
+    
 class FieldApiTests(TableMixin, ResourceTestCase):
      
     fields_uri = FieldsResource().get_resource_uri()
