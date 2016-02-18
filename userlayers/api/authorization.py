@@ -15,10 +15,10 @@ class FullAccessForLoginedUsers(object):
         return self.check_list_modify(object_list, user)
     
     def check_detail_modify(self, object_list, user):
-        return object_list[0] in self.check_list_modify(object_list, user)
+        return object_list[0].pk in [o.pk for o in self.check_list_modify(object_list, user)]
     
     def check_detail_view(self, object_list, user):
-        return object_list[0] in self.check_list_view(object_list, user)
+        return object_list[0].pk in [o.pk for o in self.check_list_view(object_list, user)]
     
     def read_list(self, object_list, bundle):
         return self.check_list_view(object_list, bundle.request.user)
