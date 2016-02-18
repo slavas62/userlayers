@@ -79,7 +79,16 @@ class FieldApiTests(TableMixin, ResourceTestCase):
         self.assertIn(resp.status_code, [202, 204])
         resp = self.api_client.get(location)
         self.assertValidJSONResponse(resp)
-        self.assertEqual(newfieldname, json.loads(resp.content).get('name'))
+        resp_data = json.loads(resp.content)
+        self.assertEqual(newfieldname, resp_data.get('name'))
+        resp = self.api_client.get(resp_data['table'])
+        self.assertValidJSONResponse(resp)
+        
+        #ensure that field really renamed within DB. If not then server will generate exception.
+        objects_uri = json.loads(resp.content)['objects_uri']
+        resp = self.api_client.get(objects_uri)
+        self.assertValidJSONResponse(resp)
+        
 
 class TableDataTests(TableMixin, ResourceTestCase):
     
