@@ -301,7 +301,7 @@ class FileImportResource(Resource):
             dst_file.write(c)
         dst_file.close()
         try:
-            geojson_data = convert_to_geojson_data(dst_file.name)
+            geojson_data = convert_to_geojson_data(dst_file.name, unicode_errors='ignore')
             not_empty_layers = [l for l in geojson_data if len(l['features'])]
             if not not_empty_layers:
                 raise FileImportError(u'file does not contain any features')
