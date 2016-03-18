@@ -6,6 +6,7 @@ setup(
     packages=find_packages(),
     long_description=open('README.md').read(),
     install_requires=[
+        'django-polymodels == 1.4.1',
         'django-mutant == 0.2',
         'django-tastypie >= 0.13.0',
         'transliterate == 1.7.3',
