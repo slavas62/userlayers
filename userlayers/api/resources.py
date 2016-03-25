@@ -182,7 +182,11 @@ class TableProxyResource(Resource):
                 max_limit = None
         
             def dispatch(self, *args, **kwargs):
-                response = super(R, self).dispatch(*args, **kwargs)
+                try:
+                    response = super(R, self).dispatch(*args, **kwargs)
+                except ValueError:
+                    from django.http import HttpResponseBadRequest
+                    response = HttpResponseBadRequest('{"error": "wrong value(s)!"}')
                 ct = response.get('Content-Type')
                 if ct and ct.startswith('application/zip'):
                     response['Content-Disposition'] = 'attachment; filename=%s.zip' % md.name

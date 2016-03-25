@@ -3,6 +3,29 @@ from django.contrib.auth import get_user_model
 from tastypie.test import ResourceTestCase
 from userlayers.api.resources import TablesResource, FieldsResource
 
+TABLE_META = {
+    'name': 'foo',
+    'fields': [
+        {
+            'name': 'text_field',
+            'type': 'text'
+        },
+        {
+            'name': 'integer_field',
+            'type': 'integer'
+        },
+        {
+            'name': 'float_field',
+            'type': 'float'
+        },
+        {
+            'name': 'boolean_field',
+            'type': 'boolean'
+        }
+    ]
+}
+
+
 class TableMixin(object):
     uri = TablesResource().get_resource_uri()
     
@@ -12,17 +35,34 @@ class TableMixin(object):
         self.api_client.client.login(**credentials)
 
     def create_table(self):
-        payload = {"name": "foo", "fields": [{"name": "display_name", "type": "text"}, {"name": "value", "type": "integer"}, {"name": "is_ok", "type": "boolean"}]}
+        payload = TABLE_META
         resp = self.api_client.post(self.uri, data=payload)
         self.assertHttpCreated(resp)
         self.assertTrue(resp.has_header('Location'))
         return resp.get('Location')
-    
+
+    def create_object_in_table(self, text_field='text', integer_field=1, float_field=1.1, boolean_field=True):
+        resp = self.api_client.get(self.create_table())
+        data = self.deserialize(resp)
+        objects_uri = data['objects_uri']
+        payload = {
+            'text_field': text_field,
+            'integer_field': integer_field,
+            'float_field': float_field,
+            'boolean_field': boolean_field
+        }
+        return self.api_client.post(objects_uri, data=payload)
+
     def get_object_uri(self):
         resp = self.api_client.get(self.create_table())
         data = self.deserialize(resp)
         objects_uri = data['objects_uri']
-        payload = {'name': 'foo', 'value': 5, 'is_ok': True}
+        payload = {
+            'text_field': 'foo',
+            'integer_field': 1,
+            'float_field': 1.1,
+            'boolean_field': True
+        }
         resp = self.api_client.post(objects_uri, data=payload)
         self.assertHttpCreated(resp)
         self.assertTrue(resp.has_header('Location'))
@@ -96,6 +136,34 @@ class TableDataTests(TableMixin, ResourceTestCase):
         location = self.get_object_uri()
         self.api_client.delete(location)
         self.assertHttpNotFound(self.api_client.get(location))
+
+    def test_create_entry_with_wrong_values(self):
+        # import ipdb;ipdb.set_trace()
+        # text cases
+        # resp = self.create_object_in_table(text_field=1)
+        # # self.assertHttpCreated(resp)
+        # resp = self.create_object_in_table(text_field=1.1)
+        # # self.assertHttpCreated(resp)
+        # resp = self.create_object_in_table(text_field=True)
+        # # integer cases
+        # resp = self.create_object_in_table(integer_field=1.2)
+        # # self.assertHttpCreated(resp)
+        resp = self.create_object_in_table(integer_field='1.2')
+        self.assertHttpBadRequest(resp)
+        # resp = self.create_object_in_table(integer_field=True)
+        # self.assertHttpCreated(resp)
+        # # float cases
+        # self.create_object_in_table(float_field='10/6')
+        # # self.assertHttpBadRequest(resp)
+        # resp = self.create_object_in_table(float_field=True)
+        # # self.assertHttpBadRequest(resp)
+        # # boolean cases
+        # resp = self.create_object_in_table(boolean_field='123')
+        # # self.assertHttpCreated(resp)
+        # resp = self.create_object_in_table(boolean_field='false')
+        # # self.assertHttpCreated(resp)
+        # resp = self.create_object_in_table(boolean_field=True)
+        # self.assertHttpCreated(resp)
 
     def test_shapefile_export(self):
         location = self.get_object_uri()
