@@ -41,17 +41,28 @@ class TableMixin(object):
         self.assertTrue(resp.has_header('Location'))
         return resp.get('Location')
 
-    def create_object_in_table(self, text_field='text', integer_field=1, float_field=1.1, boolean_field=True):
-        resp = self.api_client.get(self.create_table())
-        data = self.deserialize(resp)
-        objects_uri = data['objects_uri']
-        payload = {
-            'text_field': text_field,
-            'integer_field': integer_field,
-            'float_field': float_field,
-            'boolean_field': boolean_field
+    def create_objects_in_table(self, table_uri, values=None):
+        """ values must look like
+        values = {
+            'text_field': ('foo', 'bar'),
+            'integer_field': (1, 2),
+            'float_field': (1, 1.1),
+            'boolean_field': (1, 0)
         }
-        return self.api_client.post(objects_uri, data=payload)
+        """
+        payload = {
+            'objects': []
+        }
+        if not values:
+            return self.api_client.put(table_uri, data=payload)
+        for k, v in values.items():
+            l_values = values.get(k)
+            if l_values:
+                for val in l_values:
+                    payload['objects'].append(
+                        {k: val}
+                    )
+        return self.api_client.put(table_uri, data=payload)
 
     def get_object_uri(self):
         resp = self.api_client.get(self.create_table())
@@ -138,38 +149,28 @@ class TableDataTests(TableMixin, ResourceTestCase):
         self.assertHttpNotFound(self.api_client.get(location))
 
     def test_create_entry_with_wrong_values(self):
-        # import ipdb;ipdb.set_trace()
-        # text cases
-        # resp = self.create_object_in_table(text_field=1)
-        # # self.assertHttpCreated(resp)
-        # resp = self.create_object_in_table(text_field=1.1)
-        # # self.assertHttpCreated(resp)
-        # resp = self.create_object_in_table(text_field=True)
-        # # integer cases
-        # resp = self.create_object_in_table(integer_field=1.2)
-        # # self.assertHttpCreated(resp)
-        resp = self.create_object_in_table(integer_field='1.2')
+        resp = self.api_client.get(self.create_table())
+        data = self.deserialize(resp)
+        table_uri = data['objects_uri']
+        payload = {
+            'integer_field': ('1.1', '10/6'),
+            'float_field': ('10/6',)
+        }
+        resp = self.create_objects_in_table(table_uri, payload)
         self.assertHttpBadRequest(resp)
-        # resp = self.create_object_in_table(integer_field=True)
-        # self.assertHttpCreated(resp)
-        # # float cases
-        # self.create_object_in_table(float_field='10/6')
-        # # self.assertHttpBadRequest(resp)
-        # resp = self.create_object_in_table(float_field=True)
-        # # self.assertHttpBadRequest(resp)
-        # # boolean cases
-        # resp = self.create_object_in_table(boolean_field='123')
-        # # self.assertHttpCreated(resp)
-        # resp = self.create_object_in_table(boolean_field='false')
-        # # self.assertHttpCreated(resp)
-        # resp = self.create_object_in_table(boolean_field=True)
-        # self.assertHttpCreated(resp)
 
-    def test_shapefile_export(self):
-        location = self.get_object_uri()
-        resp = self.api_client.get(location, data={'format': 'shapefile'})
-        self.assertHttpOK(resp)
-        self.assertTrue('application/zip' in resp.get('Content-Type'))
+    def test_create_entry_with_right_values(self):
+        resp = self.api_client.get(self.create_table())
+        data = self.deserialize(resp)
+        table_uri = data['objects_uri']
+        payload = {
+            'text_field': (1, 1.1, True, False, '', '*'*100),
+            'integer_field': (1, 1.1, True, False, '1'),
+            'float_field': (1, 1.1, True, False, '1.1'),
+            'boolean_field': ('', 'foo', True, False, 123, 0, 1)
+        }
+        resp = self.create_objects_in_table(table_uri, payload)
+        self.assertHttpAccepted(resp)
 
 class AuthorizationTests(TableMixin, ResourceTestCase):
     def test_table_access(self):
