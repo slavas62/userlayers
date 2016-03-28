@@ -56,12 +56,10 @@ class TableMixin(object):
         if not values:
             return self.api_client.put(table_uri, data=payload)
         for k, v in values.items():
-            l_values = values.get(k)
-            if l_values:
-                for val in l_values:
-                    payload['objects'].append(
-                        {k: val}
-                    )
+            for val in v:
+                payload['objects'].append(
+                    {k: val}
+                )
         return self.api_client.put(table_uri, data=payload)
 
     def get_object_uri(self):
@@ -148,13 +146,19 @@ class TableDataTests(TableMixin, ResourceTestCase):
         self.api_client.delete(location)
         self.assertHttpNotFound(self.api_client.get(location))
 
+    def test_shapefile_export(self):
+        location = self.get_object_uri()
+        resp = self.api_client.get(location, data={'format': 'shapefile'})
+        self.assertHttpOK(resp)
+        self.assertTrue('application/zip' in resp.get('Content-Type'))
+
     def test_create_entry_with_wrong_values(self):
         resp = self.api_client.get(self.create_table())
         data = self.deserialize(resp)
         table_uri = data['objects_uri']
         payload = {
-            'integer_field': ('1.1', '10/6'),
-            'float_field': ('10/6',)
+            'integer_field': ('1.1', 'some text'),
+            'float_field': ('some text',)
         }
         resp = self.create_objects_in_table(table_uri, payload)
         self.assertHttpBadRequest(resp)
@@ -164,10 +168,10 @@ class TableDataTests(TableMixin, ResourceTestCase):
         data = self.deserialize(resp)
         table_uri = data['objects_uri']
         payload = {
-            'text_field': (1, 1.1, True, False, '', '*'*100),
+            'text_field': (1, 1.1, True, False, '', 'some text'),
             'integer_field': (1, 1.1, True, False, '1'),
             'float_field': (1, 1.1, True, False, '1.1'),
-            'boolean_field': ('', 'foo', True, False, 123, 0, 1)
+            'boolean_field': ('', 'some text', True, False, 123, 0, 1)
         }
         resp = self.create_objects_in_table(table_uri, payload)
         self.assertHttpAccepted(resp)
