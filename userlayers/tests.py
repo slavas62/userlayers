@@ -1,6 +1,6 @@
 import json
 from django.contrib.auth import get_user_model
-from tastypie.test import ResourceTestCase
+from tastypie.test import ResourceTestCase, TestApiClient
 from userlayers.api.resources import TablesResource, FieldsResource
 
 TABLE_META = {
@@ -152,28 +152,59 @@ class TableDataTests(TableMixin, ResourceTestCase):
         self.assertHttpOK(resp)
         self.assertTrue('application/zip' in resp.get('Content-Type'))
 
+
+class TableDataTestValues(ResourceTestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        credentials = dict(username='user', password='password')
+        get_user_model().objects.create_user(**credentials)
+        uri = TablesResource().get_resource_uri()
+        cls.cli = TestApiClient()
+        cls.cli.client.login(**credentials)
+        resp = cls.cli.post(uri, data=TABLE_META)
+        uri = resp.get('Location')
+        resp = cls.cli.get(uri)
+        data = json.loads(resp.content)
+        cls.table_uri = data['objects_uri']
+
+    def create_objects_in_table(self, values=None):
+        """ values must look like
+        values = {
+            'text_field': ('foo', 'bar'),
+            'integer_field': (1, 2),
+            'float_field': (1, 1.1),
+            'boolean_field': (1, 0)
+        }
+        """
+        payload = {
+            'objects': []
+        }
+        if not values:
+            return self.cli.put(self.table_uri, data=payload)
+        for k, v in values.items():
+            for val in v:
+                payload['objects'].append(
+                    {k: val}
+                )
+        return self.cli.put(self.table_uri, data=payload)
+
     def test_create_entry_with_wrong_values(self):
-        resp = self.api_client.get(self.create_table())
-        data = self.deserialize(resp)
-        table_uri = data['objects_uri']
         payload = {
             'integer_field': ('1.1', 'some text'),
             'float_field': ('some text',)
         }
-        resp = self.create_objects_in_table(table_uri, payload)
+        resp = self.create_objects_in_table(payload)
         self.assertHttpBadRequest(resp)
 
     def test_create_entry_with_right_values(self):
-        resp = self.api_client.get(self.create_table())
-        data = self.deserialize(resp)
-        table_uri = data['objects_uri']
         payload = {
             'text_field': (1, 1.1, True, False, '', 'some text'),
             'integer_field': (1, 1.1, True, False, '1'),
             'float_field': (1, 1.1, True, False, '1.1'),
             'boolean_field': ('', 'some text', True, False, 123, 0, 1)
         }
-        resp = self.create_objects_in_table(table_uri, payload)
+        resp = self.create_objects_in_table(payload)
         self.assertHttpAccepted(resp)
 
 class AuthorizationTests(TableMixin, ResourceTestCase):
