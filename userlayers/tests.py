@@ -162,10 +162,7 @@ class TableDataTestValues(ResourceTestCase):
         if not values:
             return self.cli.put(self.table_uri, data=payload)
         for k, v in values.items():
-            for val in v:
-                payload['objects'].append(
-                    {k: val}
-                )
+            payload['objects'] += map(lambda i: {k: i}, v)
         return self.cli.put(self.table_uri, data=payload)
 
     def test_create_entry_with_wrong_values(self):
