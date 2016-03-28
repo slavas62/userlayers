@@ -41,27 +41,6 @@ class TableMixin(object):
         self.assertTrue(resp.has_header('Location'))
         return resp.get('Location')
 
-    def create_objects_in_table(self, table_uri, values=None):
-        """ values must look like
-        values = {
-            'text_field': ('foo', 'bar'),
-            'integer_field': (1, 2),
-            'float_field': (1, 1.1),
-            'boolean_field': (1, 0)
-        }
-        """
-        payload = {
-            'objects': []
-        }
-        if not values:
-            return self.api_client.put(table_uri, data=payload)
-        for k, v in values.items():
-            for val in v:
-                payload['objects'].append(
-                    {k: val}
-                )
-        return self.api_client.put(table_uri, data=payload)
-
     def get_object_uri(self):
         resp = self.api_client.get(self.create_table())
         data = self.deserialize(resp)
