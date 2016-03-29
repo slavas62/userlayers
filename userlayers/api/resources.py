@@ -181,7 +181,7 @@ class TableProxyResource(Resource):
                 authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None
-                validation = FormValidation(form_class=modelform_factory(md.model_class(), fields='__all__'))
+                validation = FormValidation(form_class=modelform_factory(md.model_class(), exclude=('id',)))
 
             def dispatch(self, *args, **kwargs):
                 response = super(R, self).dispatch(*args, **kwargs)
