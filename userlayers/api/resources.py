@@ -3,6 +3,7 @@ import json
 import mutant
 import logging
 
+from django import forms
 from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
@@ -25,7 +26,7 @@ from userlayers.settings import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOME
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
-from .validators import FieldValidation, TableValidation
+from .validators import FieldValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, get_table_auth, get_field_auth, get_table_data_auth
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
@@ -171,7 +172,13 @@ class TableProxyResource(Resource):
             return http.HttpNotFound()
         
         proxy = self
-        
+
+        class TableLayerForm(forms.ModelForm):
+
+            class Meta:
+                model = md.model_class()
+                fields = '__all__'
+
         class R(ModelResource):
             logger = logging.getLogger('userlayers.api.data')
             
@@ -180,8 +187,8 @@ class TableProxyResource(Resource):
                 authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None
-                validation = TableValidation()
-        
+                validation = FormValidation(form_class=TableLayerForm)
+
             def dispatch(self, *args, **kwargs):
                 response = super(R, self).dispatch(*args, **kwargs)
                 ct = response.get('Content-Type')
