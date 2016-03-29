@@ -153,7 +153,7 @@ class TableDataTests(TableMixin, ResourceTestCase):
         self.assertHttpOK(resp)
         self.assertTrue('application/zip' in resp.get('Content-Type'))
 
-    def test_create_entries_with_wrong_values(self):
+    def test_create_objects_with_wrong_values(self):
         payload = {
             'integer_field': ('1.1', 'some text'),
             'float_field': ('some text',)
@@ -161,7 +161,7 @@ class TableDataTests(TableMixin, ResourceTestCase):
         resp = self.create_objects_in_table(payload)
         self.assertHttpBadRequest(resp)
 
-    def test_create_entries(self):
+    def test_create_objects(self):
         payload = {
             'text_field': (1, 1.1, True, False, '', 'some text'),
             'integer_field': (1, 1.1, True, False, '1'),
