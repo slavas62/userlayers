@@ -147,7 +147,7 @@ class TableDataTestValues(ResourceTestCase):
         data = json.loads(resp.content)
         cls.table_uri = data['objects_uri']
 
-    def create_objects_in_table(self, values=None):
+    def create_entries_in_table(self, values=None):
         """ values must look like
         values = {
             'text_field': ('foo', 'bar'),
@@ -165,22 +165,22 @@ class TableDataTestValues(ResourceTestCase):
             payload['objects'] += map(lambda i: {k: i}, v)
         return self.cli.put(self.table_uri, data=payload)
 
-    def test_create_entry_with_wrong_values(self):
+    def test_create_entries_with_wrong_values(self):
         payload = {
             'integer_field': ('1.1', 'some text'),
             'float_field': ('some text',)
         }
-        resp = self.create_objects_in_table(payload)
+        resp = self.create_entries_in_table(payload)
         self.assertHttpBadRequest(resp)
 
-    def test_create_entry_with_right_values(self):
+    def test_create_entries(self):
         payload = {
             'text_field': (1, 1.1, True, False, '', 'some text'),
             'integer_field': (1, 1.1, True, False, '1'),
             'float_field': (1, 1.1, True, False, '1.1'),
             'boolean_field': ('', 'some text', True, False, 123, 0, 1)
         }
-        resp = self.create_objects_in_table(payload)
+        resp = self.create_entries_in_table(payload)
         self.assertHttpAccepted(resp)
 
 class AuthorizationTests(TableMixin, ResourceTestCase):
