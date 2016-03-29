@@ -156,7 +156,8 @@ class TableDataTests(TableMixin, ResourceTestCase):
     def test_create_objects_with_wrong_values(self):
         payload = {
             'integer_field': ('1.1', 'some text'),
-            'float_field': ('some text',)
+            'float_field': ('some text',),
+            'boolean_field': (1, 0, '', '123')
         }
         resp = self.create_objects_in_table(payload)
         self.assertHttpBadRequest(resp)
@@ -166,7 +167,7 @@ class TableDataTests(TableMixin, ResourceTestCase):
             'text_field': (1, 1.1, True, False, '', 'some text'),
             'integer_field': (1, 1.1, True, False, '1'),
             'float_field': (1, 1.1, True, False, '1.1'),
-            'boolean_field': ('', 'some text', True, False, 123, 0, 1)
+            'boolean_field': (True, False)
         }
         resp = self.create_objects_in_table(payload)
         self.assertHttpAccepted(resp)

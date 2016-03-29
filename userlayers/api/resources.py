@@ -25,7 +25,7 @@ from userlayers.settings import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOME
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
 from vectortools.reader import VectorReaderError
-from .validators import FieldValidation
+from .validators import FieldValidation, TableValidation
 from .serializers import GeoJsonSerializer
 from .authorization import FullAccessForLoginedUsers, get_table_auth, get_field_auth, get_table_data_auth
 from .forms import TableFromFileForm, FieldForm, FIELD_TYPES, TableForm, GEOMETRY_FIELD_TYPES
@@ -156,7 +156,7 @@ class TableProxyResource(Resource):
         resource_name = 'tablesdata'
         authorization = FullAccessForLoginedUsers()
         authentication = SessionAuthentication()
-    
+
     def uri_for_table(self, table_pk):
         return reverse('api_dispatch_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name))
     
@@ -180,12 +180,10 @@ class TableProxyResource(Resource):
                 authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None
+                validation = TableValidation()
         
             def dispatch(self, *args, **kwargs):
-                try:
-                    response = super(R, self).dispatch(*args, **kwargs)
-                except ValueError:
-                    raise BadRequest('You send wrong value(s).')
+                response = super(R, self).dispatch(*args, **kwargs)
                 ct = response.get('Content-Type')
                 if ct and ct.startswith('application/zip'):
                     response['Content-Disposition'] = 'attachment; filename=%s.zip' % md.name
