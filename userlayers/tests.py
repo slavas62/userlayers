@@ -46,7 +46,7 @@ class TableMixin(object):
         data = self.deserialize(resp)
         return data['objects_uri']
 
-    def create_objects_in_table(self, values=None):
+    def create_objects_in_table(self, values):
         """ values must look like
         values = {
             'text_field': ('foo', 'bar'),
@@ -59,8 +59,6 @@ class TableMixin(object):
         payload = {
             'objects': []
         }
-        if not values:
-            return self.api_client.put(objects_uri, data=payload)
         for k, v in values.items():
             payload['objects'] += map(lambda i: {k: i}, v)
         return self.api_client.put(objects_uri, data=payload)
