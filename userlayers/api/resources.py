@@ -3,7 +3,7 @@ import json
 import mutant
 import logging
 
-from django import forms
+from django.forms.models import modelform_factory
 from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
@@ -173,12 +173,6 @@ class TableProxyResource(Resource):
         
         proxy = self
 
-        class TableLayerForm(forms.ModelForm):
-
-            class Meta:
-                model = md.model_class()
-                fields = '__all__'
-
         class R(ModelResource):
             logger = logging.getLogger('userlayers.api.data')
             
@@ -187,7 +181,7 @@ class TableProxyResource(Resource):
                 authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None
-                validation = FormValidation(form_class=TableLayerForm)
+                validation = FormValidation(form_class=modelform_factory(md.model_class(), fields='__all__'))
 
             def dispatch(self, *args, **kwargs):
                 response = super(R, self).dispatch(*args, **kwargs)
