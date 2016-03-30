@@ -3,6 +3,7 @@ import json
 import mutant
 import logging
 
+from django.contrib.gis.gdal import GDALException
 from django.forms.models import modelform_factory
 from django.conf import settings
 from django.conf.urls import url
@@ -17,6 +18,7 @@ from tastypie import fields, http
 from tastypie.bundle import Bundle
 from tastypie.authorization import Authorization
 from tastypie.authentication import SessionAuthentication
+from tastypie.serializers import Serializer
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
@@ -197,16 +199,30 @@ class TableProxyResource(Resource):
                     url += '%s%s' % (kw['pk'], trailing_slash())
                 return url
         
+            def error_response(self, request, errors, response_class=None):
+                if isinstance(self._meta.serializer, GeoJsonSerializer):
+                    self._meta.serializer = Serializer()
+                import ipdb;ipdb.set_trace()
+                return super(R, self).error_response(request, errors, response_class=None)
+        
             def serialize(self, request, data, format, options=None):
                 options = options or {}
                 options['geometry_field'] = DEFAULT_MD_GEOMETRY_FIELD_NAME
                 return super(R, self).serialize(request, data, format, options)
-            
+
+            def full_hydrate(self, bundle):
+                bundle = super(R, self).full_hydrate(bundle)
+                try:
+                    bundle.data['geometry'] = bundle.obj.geometry
+                except GDALException:
+                    raise ImmediateHttpResponse(response=self.error_response(bundle.request, {'geometry': 'invalid geometry'}))
+                return bundle
+
             def obj_create(self, bundle, **kwargs):
                 bundle = super(R, self).obj_create(bundle, **kwargs)
                 self.logger.info('"%s" created table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
                 return bundle
-            
+
             def obj_update(self, bundle, **kwargs):
                 bundle = super(R, self).obj_update(bundle, **kwargs)
                 self.logger.info('"%s" updated table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
