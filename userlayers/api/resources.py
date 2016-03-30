@@ -202,7 +202,6 @@ class TableProxyResource(Resource):
             def error_response(self, request, errors, response_class=None):
                 if isinstance(self._meta.serializer, GeoJsonSerializer):
                     self._meta.serializer = Serializer()
-                import ipdb;ipdb.set_trace()
                 return super(R, self).error_response(request, errors, response_class=None)
         
             def serialize(self, request, data, format, options=None):
