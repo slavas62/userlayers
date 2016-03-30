@@ -28,7 +28,7 @@ TABLE_META = {
 
 class TableMixin(object):
     uri = TablesResource().get_resource_uri()
-    
+
     def create_user_and_login(self, username='user'):
         credentials = dict(username=username, password='password')
         get_user_model().objects.create_user(**credentials)
@@ -49,6 +49,7 @@ class TableMixin(object):
     def create_objects_in_table(self, values):
         """ values must look like
         values = {
+            'geometry': ('{"type":"MultiPoint","coordinates":[[94.79003906249999,65.3668368922632]]}',),
             'text_field': ('foo', 'bar'),
             'integer_field': (1, 2),
             'float_field': (1, 1.1),
@@ -76,13 +77,13 @@ class TableMixin(object):
         self.assertTrue(resp.has_header('Location'))
         location = resp.get('Location')
         return location
-    
+
     def setUp(self):
         super(TableMixin, self).setUp()
         self.create_user_and_login()
 
 class TableApiTests(TableMixin, ResourceTestCase):
-    
+
     def test_create_delete_table(self):
         location = self.create_table()
         self.assertValidJSONResponse(self.api_client.get(location))
@@ -91,7 +92,7 @@ class TableApiTests(TableMixin, ResourceTestCase):
 
     def test_get_table_list(self):
         self.assertValidJSONResponse(self.api_client.get(self.uri))
-        
+
     def test_table_rename(self):
         table = self.create_table()
         newtablename = 'newtablename'
@@ -100,9 +101,9 @@ class TableApiTests(TableMixin, ResourceTestCase):
         self.assertIn(resp.status_code, [202, 204])
         resp = self.api_client.get(table)
         self.assertEqual(newtablename, json.loads(resp.content).get('name'))
-    
+
 class FieldApiTests(TableMixin, ResourceTestCase):
-     
+
     fields_uri = FieldsResource().get_resource_uri()
 
     def add_field(self):
@@ -113,7 +114,7 @@ class FieldApiTests(TableMixin, ResourceTestCase):
         self.assertTrue(resp.has_header('Location'))
         location = resp.get('Location')
         return location
- 
+
     def test_create_delete_field(self):
         location = self.add_field()
         resp = self.api_client.delete(location)
@@ -131,15 +132,15 @@ class FieldApiTests(TableMixin, ResourceTestCase):
         self.assertEqual(newfieldname, resp_data.get('name'))
         resp = self.api_client.get(resp_data['table'])
         self.assertValidJSONResponse(resp)
-        
+
         #ensure that field really renamed within DB. If not then server will generate exception.
         objects_uri = json.loads(resp.content)['objects_uri']
         resp = self.api_client.get(objects_uri)
         self.assertValidJSONResponse(resp)
-        
+
 
 class TableDataTests(TableMixin, ResourceTestCase):
-    
+
     def test_create_delete_entry(self):
         location = self.get_object_uri()
         self.api_client.delete(location)
@@ -153,6 +154,7 @@ class TableDataTests(TableMixin, ResourceTestCase):
 
     def test_create_objects_with_wrong_values(self):
         payload = {
+            'geometry': ({"type": "MultiPoint", "coordinates": [94.79003906249999, 65.3668368922632]},),
             'integer_field': (1.1, 'some text'),
             'float_field': ('some text',)
         }
@@ -161,6 +163,7 @@ class TableDataTests(TableMixin, ResourceTestCase):
 
     def test_create_objects(self):
         payload = {
+            'geometry': ({"type": "MultiPoint", "coordinates": [[94.79003906249999, 65.3668368922632]]},),
             'text_field': (1, 1.1, True, False, '', 'some text', None),
             'integer_field': (1, '1', '', None),
             'float_field': (1, 1.1, True, False, '1.1', None),
@@ -175,7 +178,7 @@ class AuthorizationTests(TableMixin, ResourceTestCase):
         location = self.create_table()
         self.create_user_and_login('user2')
         self.assertHttpUnauthorized(self.api_client.get(location))
-        
+
     def test_table_data_access(self):
         location = self.get_object_uri()
         self.create_user_and_login('user2')
