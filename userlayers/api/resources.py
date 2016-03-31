@@ -8,9 +8,11 @@ from django.forms.models import modelform_factory
 from django.conf import settings
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.http.response import HttpResponse
 from django.contrib.gis.geos import GEOSGeometry, WKBWriter
 from django.contrib.gis.geos.error import GEOSException
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import transaction
 from tastypie.resources import Resource
 from tastypie.contrib.gis.resources import ModelResource
@@ -23,7 +25,7 @@ from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
 from userlayers.signals import table_created, table_updated
-from userlayers.models import UserToTable
+from userlayers.models import UserToTable, AttachedFile
 from userlayers.settings import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOMETRY_FIELD_TYPE
 from vectortools.fsutils import TempDir
 from vectortools.geojson import convert_to_geojson_data
@@ -163,23 +165,40 @@ class TableProxyResource(Resource):
     def uri_for_table(self, table_pk):
         return reverse('api_dispatch_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name))
     
-    def get_resource_uri(self, *args, **kwargs):
-        return self.uri_for_table(self.table_pk)
+    def uri_for_file_list(self, table_pk, object_pk):
+        return reverse('api_dispatch_files_list', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name, pk=object_pk))
     
-    def dispatch(self, request_type, request, **kwargs):
-        self.table_pk = kwargs.pop('table_pk')
+    def uri_for_file_detail(self, table_pk, object_pk, file_pk):
+        return reverse('api_dispatch_files_detail', kwargs=dict(table_pk=table_pk, api_name=self._meta.api_name, pk=object_pk, file_pk=file_pk))
+    
+    def get_objects_resource(self, table_pk):
         try:
-            md = ModelDefinition.objects.get(pk=self.table_pk)
+            md = ModelDefinition.objects.get(pk=table_pk)
         except ModelDefinition.DoesNotExist:
             return http.HttpNotFound()
         
+        Model = md.model_class()
+        
+        gr = GenericRelation(AttachedFile)
+        gr.contribute_to_class(Model, 'files')
+        
         proxy = self
-
+        
+        class AttachedFilesInlineResource(ModelResource):
+            class Meta:
+                queryset = AttachedFile.objects.all()
+                
+            def get_resource_uri(self, bundle):
+                kwargs = dict(table_pk=md.pk, object_pk=bundle.obj.object_id, file_pk=bundle.obj.pk)
+                return proxy.uri_for_file_detail(**kwargs)
+        
         class R(ModelResource):
             logger = logging.getLogger('userlayers.api.data')
             
+            files = fields.ToManyField(AttachedFilesInlineResource, 'files', full=True, readonly=True)
+            
             class Meta:
-                queryset = md.model_class().objects.all()
+                queryset = Model.objects.prefetch_related('files')
                 authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None
@@ -192,8 +211,11 @@ class TableProxyResource(Resource):
                     response['Content-Disposition'] = 'attachment; filename=%s.zip' % md.name
                 return response
         
+            def get_model_definition(self):
+                return md
+        
             def get_resource_uri(self, bundle_or_obj=None, **kwargs):
-                url = proxy.get_resource_uri()
+                url = proxy.uri_for_table(table_pk)
                 if bundle_or_obj:
                     kw = self.resource_uri_kwargs(bundle_or_obj)
                     url += '%s%s' % (kw['pk'], trailing_slash())
@@ -230,13 +252,81 @@ class TableProxyResource(Resource):
             def obj_delete(self, bundle, **kwargs):
                 super(R, self).obj_delete(bundle, **kwargs)
                 self.logger.info('"%s" deleted table data, table "%s", object pk "%s"' % (bundle.request.user, md.db_table, bundle.obj.pk))
-        
+                
+            def dehydrate(self, bundle):
+                bundle.data['files_uri'] = proxy.uri_for_file_list(table_pk, bundle.obj.pk)
+                return bundle
+                
+        return R
+    
+    def dispatch(self, request_type, request, **kwargs):
+        R = self.get_objects_resource(table_pk=kwargs.get('table_pk'))
         return R().dispatch(request_type, request, **kwargs)
+    
+    def dispatch_files_list(self, request, **kwargs):
+        return self.dispatch_files('list', request, **kwargs)
+    
+    def dispatch_files_detail(self, request, **kwargs):
+        return self.dispatch_files('detail', request, **kwargs)
+    
+    def dispatch_files(self, request_type, request, **kwargs):
+        obj_res = self.get_objects_resource(table_pk=kwargs.get('table_pk'))()
+        obj_bundle = obj_res.build_bundle(request=request)
+        try:
+            obj = obj_res.cached_obj_get(bundle=obj_bundle, **kwargs)
+        except ObjectDoesNotExist:
+            return http.HttpNotFound()
+        except MultipleObjectsReturned:
+            return http.HttpMultipleChoices("More than one resource is found at this URI.")
+        
+        proxy = self
+        md = obj_res.get_model_definition()
+        
+        class R(ModelResource):
+            
+            class Meta:
+                queryset = AttachedFile.objects.filter(content_type=md, object_id=obj.pk)
+                fields = ['id', 'file']
+                list_allowed_methods = ['get', 'post', 'delete']
+                detail_allowed_methods = ['get', 'delete']
+                authorization = Authorization()
+                
+            def get_resource_uri(self, bundle_or_obj=None, **kwargs):
+                kwargs = dict(table_pk=md.pk, object_pk=obj.pk)
+                
+                if bundle_or_obj:
+                    kwargs['file_pk'] = self.detail_uri_kwargs(bundle_or_obj).get('pk')
+                    return proxy.uri_for_file_detail(**kwargs)
+                else:
+                    return proxy.uri_for_file_list(**kwargs)
+                
+            def authorized_create_detail(self, object_list, bundle):
+                if obj_res.authorized_update_detail([obj], obj_bundle):
+                    return object_list
+                return []
+            
+            def authorized_delete_detail(self, object_list, bundle):
+                return self.authorized_create_detail(object_list, bundle)
+                
+            def deserialize(self, request, data, format=None):
+                return request.FILES
+            
+            def hydrate(self, bundle):
+                bundle.obj.content_type = md
+                bundle.obj.object_id = obj.pk
+                return bundle
+                
+        return R().dispatch(request_type, request, **{'pk': kwargs.get('file_pk')})
     
     def base_urls(self):
         return [
             url(r"^(?P<resource_name>%s)%s$" % (self._meta.resource_name, trailing_slash()), self.wrap_view('dispatch_list'), name="api_dispatch_list"),
             url(r"^(?P<resource_name>%s)/schema%s$" % (self._meta.resource_name, trailing_slash()), self.wrap_view('get_schema'), name="api_get_schema"),
+
+            
+            #attached files
+            url(r"%s/(?P<%s>.*?)/files/(?P<file_pk>\d+)%s$" % (self.pattern, self._meta.detail_uri_name, trailing_slash()), self.wrap_view('dispatch_files_detail'), name="api_dispatch_files_detail"),
+            url(r"%s/(?P<%s>.*?)/files%s$" % (self.pattern, self._meta.detail_uri_name, trailing_slash()), self.wrap_view('dispatch_files_list'), name="api_dispatch_files_list"),
             
             url(r"%s%s$" % (self.pattern, trailing_slash()), self.wrap_view('dispatch_list'), name="api_dispatch_list"),
             url(r"%s/(?P<%s>.*?)%s$" % (self.pattern, self._meta.detail_uri_name, trailing_slash()), self.wrap_view('dispatch_detail'), name="api_dispatch_detail"),
