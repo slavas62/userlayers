@@ -1,5 +1,6 @@
 import json
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from tastypie.test import ResourceTestCase
 from userlayers.api.resources import TablesResource, FieldsResource
 
@@ -171,6 +172,30 @@ class TableDataTests(TableMixin, ResourceTestCase):
         }
         resp = self.create_objects_in_table(payload)
         self.assertHttpAccepted(resp)
+
+    def test_attached_files(self):
+        obj = self.get_object_uri()
+        resp = self.api_client.get(obj)
+        data = json.loads(resp.content)
+        files_uri = data['properties'].get('files_uri')
+        self.assertTrue(files_uri)
+        
+        f = SimpleUploadedFile('somefile.txt', 'some content')
+        resp = self.api_client.client.post(files_uri, dict(file=f))
+        self.assertHttpCreated(resp)
+        
+        file_uri = resp.get('Location')
+        resp = self.api_client.get(file_uri)
+        self.assertHttpOK(resp)
+        
+        resp = self.api_client.get(obj)
+        data = json.loads(resp.content)
+        props = data['properties']
+        files = props.get('files')
+        self.assertTrue(files)
+        
+        self.api_client.delete(file_uri)
+        self.assertHttpNotFound(self.api_client.get(file_uri))
 
 
 class AuthorizationTests(TableMixin, ResourceTestCase):
