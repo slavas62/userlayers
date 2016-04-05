@@ -69,3 +69,4 @@ class TableFromFileForm(forms.Form):
 class TableForm(forms.Form):
     name = forms.CharField()
     geometry_type = forms.ChoiceField(choices=GEOMETRY_FIELD_TYPES, required=False)
+    is_3d = forms.BooleanField(required=False)

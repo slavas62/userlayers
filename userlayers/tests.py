@@ -35,8 +35,7 @@ class TableMixin(object):
         get_user_model().objects.create_user(**credentials)
         self.api_client.client.login(**credentials)
 
-    def create_table(self):
-        payload = TABLE_META
+    def create_table(self, payload=TABLE_META):
         resp = self.api_client.post(self.uri, data=payload)
         self.assertHttpCreated(resp)
         self.assertTrue(resp.has_header('Location'))

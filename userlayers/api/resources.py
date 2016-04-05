@@ -125,6 +125,8 @@ class TablesResource(ModelResource):
             'null': True,
             'blank': True,
         }
+        if bundle.data.get('is_3d'):
+            kwargs['dim'] = FieldModel.DIM_3D
         obj = FieldModel(**kwargs)
         bundle.data['fields'].append(Bundle(obj=obj))
         
