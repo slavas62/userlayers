@@ -118,8 +118,14 @@ class TablesResource(ModelResource):
         return super(TablesResource, self).save(bundle, *args, **kwargs)
     
     def _create_auto_fields(self, bundle):
-        Model = dict(GEOMETRY_FIELD_TYPES).get(bundle.data.get('geometry_type'), DEFAULT_MD_GEOMETRY_FIELD_TYPE)
-        obj = Model(name=DEFAULT_MD_GEOMETRY_FIELD_NAME, model_def=bundle.obj, null=True, blank=True)
+        FieldModel = dict(GEOMETRY_FIELD_TYPES).get(bundle.data.get('geometry_type'), DEFAULT_MD_GEOMETRY_FIELD_TYPE)
+        kwargs = {
+            'name': DEFAULT_MD_GEOMETRY_FIELD_NAME,
+            'model_def': bundle.obj,
+            'null': True,
+            'blank': True,
+        }
+        obj = FieldModel(**kwargs)
         bundle.data['fields'].append(Bundle(obj=obj))
         
     @transaction.atomic
