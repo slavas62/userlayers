@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from tastypie.test import ResourceTestCase
 from userlayers.api.resources import TablesResource, FieldsResource
+from django.contrib.gis.geos.geometry import GEOSGeometry
 
 TABLE_META = {
     'name': 'foo',
@@ -41,12 +42,20 @@ class TableMixin(object):
         self.assertTrue(resp.has_header('Location'))
         return resp.get('Location')
 
-    def get_objects_uri(self):
-        resp = self.api_client.get(self.create_table())
+    def get_objects_uri(self, table_uri=None):
+        table_uri = table_uri or self.create_table()
+        resp = self.api_client.get(table_uri)
         data = self.deserialize(resp)
         return data['objects_uri']
 
-    def create_objects_in_table(self, values):
+    def get_objects_3d_uri(self):
+        payload = TABLE_META.copy()
+        payload['is_3d'] = True
+        table_uri = self.create_table(payload)
+        objects_uri = self.get_objects_uri(table_uri)
+        return objects_uri
+
+    def create_objects_in_table(self, values, objects_uri=None):
         """ values must look like
         values = {
             'geometry': ('{"type":"MultiPoint","coordinates":[[94.79003906249999,65.3668368922632]]}',),
@@ -56,7 +65,7 @@ class TableMixin(object):
             'boolean_field': (1, 0)
         }
         """
-        objects_uri = self.get_objects_uri()
+        objects_uri = objects_uri or self.get_objects_uri()
         payload = {
             'objects': []
         }
@@ -195,6 +204,29 @@ class TableDataTests(TableMixin, ResourceTestCase):
         
         self.api_client.delete(file_uri)
         self.assertHttpNotFound(self.api_client.get(file_uri))
+
+    def test_3d_geometry(self):
+        objects_uri = self.get_objects_3d_uri()
+        
+        payload = {
+            'geometry': (
+                #3d
+                {"type": "Point", "coordinates": [55.45, 37.37, 120]},
+                {"type": "Polygon", "coordinates": [[[37.60, 55.75, 110], [37.62, 55.76, 120], [37.64, 55.74, 130], [37.60, 55.75, 110]]]},
+                #2d
+                {"type": "Point", "coordinates": [55.45, 37.37]},
+                {"type": "Polygon", "coordinates": [[[37.60, 55.75], [37.62, 55.76], [37.64, 55.74], [37.60, 55.75]]]},
+            )
+        }
+        resp = self.create_objects_in_table(payload, objects_uri)
+        self.assertHttpAccepted(resp)
+        
+        resp = self.api_client.get(objects_uri)
+        self.assertValidJSONResponse(resp)
+        data = json.loads(resp.content)
+        for feat in data['features']:
+            geom = GEOSGeometry(json.dumps(feat['geometry']))
+            self.assertTrue(geom.hasz)
 
 
 class AuthorizationTests(TableMixin, ResourceTestCase):

@@ -24,6 +24,7 @@ from tastypie.serializers import Serializer
 from tastypie.utils import trailing_slash
 from tastypie.exceptions import BadRequest, ImmediateHttpResponse
 from mutant.models import ModelDefinition, FieldDefinition
+from mutant.contrib.geo.models.field import GeometryFieldDefinition
 from userlayers.signals import table_created, table_updated
 from userlayers.models import UserToTable, AttachedFile
 from userlayers.settings import DEFAULT_MD_GEOMETRY_FIELD_NAME, DEFAULT_MD_GEOMETRY_FIELD_TYPE
@@ -72,9 +73,12 @@ class FieldsResource(ModelResource):
         return bundle
         
     def dehydrate(self, bundle):
-        cls = bundle.obj.content_type.model_class()
-        f_type = dict((v,k) for k,v in FIELD_TYPES)[cls]
+        obj = bundle.obj.type_cast()
+        f_type = dict((v,k) for k,v in FIELD_TYPES)[type(obj)]
         bundle.data['type'] = f_type
+        
+        if isinstance(obj, GeometryFieldDefinition):
+            bundle.data['is_3d'] = obj.dim == GeometryFieldDefinition.DIM_3D
         return bundle
 
 class TablesResource(ModelResource):
@@ -187,6 +191,8 @@ class TableProxyResource(Resource):
         
         Model = md.model_class()
         
+        GeomModelField = Model._meta.get_field_by_name(DEFAULT_MD_GEOMETRY_FIELD_NAME)[0]
+        
         gr = GenericRelation(AttachedFile)
         gr.contribute_to_class(Model, 'files')
         
@@ -245,6 +251,11 @@ class TableProxyResource(Resource):
                     bundle.data['geometry'] = bundle.obj.geometry
                 except GDALException:
                     raise ImmediateHttpResponse(response=self.error_response(bundle.request, {'geometry': 'invalid geometry'}))
+                if bundle.obj.geometry and GeomModelField.dim == 3 and not bundle.obj.geometry.hasz:
+                    geom_3d = bundle.obj.geometry.ogr
+                    geom_3d._set_coord_dim(3)
+                    bundle.data['geometry'] = geom_3d.geos
+                
                 return bundle
 
             def obj_create(self, bundle, **kwargs):
@@ -363,22 +374,27 @@ class FileImportResource(Resource):
             'GeometryCollection': 'geometry_collection',
         }
         types = []
+        is_3d = False
         for f in geojson_data['features']:
-            t = f['geometry']['type']
+            geom = GEOSGeometry(json.dumps(f['geometry']))
+            t = geom.geom_type
             if t not in types:
                 types.append(t)
+            print geom.wkt
+            if not is_3d and geom.hasz:
+                is_3d = True
         if len(types) == 1:
             geom_type = type_map.get(types[0])
         else:
             geom_type = 'geometry'
         
-        return geom_type
+        return geom_type, is_3d
 
     def create_table(self, request, name, geojson_data):
         tr = TablesResource()
         feature = geojson_data['features'][0]
         props = feature['properties']
-        geom_type = self.get_geometry_type(geojson_data)
+        geom_type, is_3d = self.get_geometry_type(geojson_data)
         fields = []
         for k, v in props.iteritems():
             if isinstance(v, (int, long)):
@@ -388,7 +404,7 @@ class FileImportResource(Resource):
             else:
                 ftype = 'text'
             fields.append({'name': k, 'type': ftype,})
-        bundle = tr.build_bundle(request=request, data=dict(name=name, geometry_type=geom_type, fields=fields))
+        bundle = tr.build_bundle(request=request, data=dict(name=name, geometry_type=geom_type, is_3d=is_3d, fields=fields))
         return tr.obj_create(bundle)
 
     def fill_table(self, model_class, geojson_data):
@@ -403,9 +419,6 @@ class FileImportResource(Resource):
                     obj.geometry = GEOSGeometry(json.dumps(f['geometry']))
                 except GEOSException:
                     raise FileImportError(u'file contains wrong geometry')
-                if obj.geometry.hasz:
-                    #force 3D to 2D geometry convertation
-                    obj.geometry = WKBWriter().write(obj.geometry)
             objects.append(obj)
         model_class.objects.bulk_create(objects)
 
