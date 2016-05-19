@@ -443,7 +443,7 @@ class FileImportResource(Resource):
         return bundle
 
     @transaction.atomic
-    def post_list(self, request, **kwargs):
+    def create_bundle(self, request):
         form = TableFromFileForm(request.POST, request.FILES)
         if not form.is_valid():
             raise ImmediateHttpResponse(response=self.error_response(request, form.errors))
@@ -451,5 +451,9 @@ class FileImportResource(Resource):
             bundle = self.process_file(request, form.cleaned_data['name'], form.cleaned_data['file'])
         except FileImportError as e:
             raise ImmediateHttpResponse(response=self.error_response(request, {'file': [e.message]}))
+        return bundle
+
+    def post_list(self, request, **kwargs):
+        bundle = self.create_bundle(request)
         location = TablesResource().get_resource_uri(bundle)
         return http.HttpCreated(location=location)
