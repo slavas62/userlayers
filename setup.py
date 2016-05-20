@@ -10,7 +10,7 @@ setup(
         'django-mutant == 0.2',
         'django-tastypie >= 0.13.0',
         'transliterate == 1.7.3',
-        'vectortools == 0.0.5',
+        'vectortools == 0.0.6',
         'shapeutils == 0.0.1',
     ],
     dependency_links = [
