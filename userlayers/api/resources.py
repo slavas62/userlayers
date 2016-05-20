@@ -380,7 +380,6 @@ class FileImportResource(Resource):
             t = geom.geom_type
             if t not in types:
                 types.append(t)
-            print geom.wkt
             if not is_3d and geom.hasz:
                 is_3d = True
         if len(types) == 1:
