@@ -1,3 +1,7 @@
+# userlayers #
+
+API for dynamic model definition based on [django-mutant](https://github.com/charettes/django-mutant)
+
 # Installation #
 
 Install app:
