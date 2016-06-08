@@ -209,10 +209,8 @@ class TableProxyResource(Resource):
         class R(ModelResource):
             logger = logging.getLogger('userlayers.api.data')
             
-            files = fields.ToManyField(AttachedFilesInlineResource, 'files', full=True, readonly=True)
-            
             class Meta:
-                queryset = Model.objects.prefetch_related('files')
+                queryset = Model.objects.all()
                 authorization = get_table_data_auth(md)()
                 serializer = GeoJsonSerializer()
                 max_limit = None

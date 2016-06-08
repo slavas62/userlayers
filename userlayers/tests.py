@@ -196,10 +196,9 @@ class TableDataTests(TableMixin, ResourceTestCase):
         resp = self.api_client.get(file_uri)
         self.assertHttpOK(resp)
         
-        resp = self.api_client.get(obj)
+        resp = self.api_client.get(files_uri)
         data = json.loads(resp.content)
-        props = data['properties']
-        files = props.get('files')
+        files = data['objects']
         self.assertTrue(files)
         
         self.api_client.delete(file_uri)
