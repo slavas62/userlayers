@@ -15,6 +15,6 @@ setup(
     ],
     dependency_links = [
 #        'https://bitbucket.org/lighter/shape-utils/get/e0b5af9.zip#egg=shapeutils-0.0.1',
-        'https://github.com/slavas62/shape-utils/archive/master.zip#egg=shapeutils-0.0.1',
+        'git+git://github.com/slavas62/shape-utils.git@master#egg=shapeutils-0.0.1',
     ],
 )
