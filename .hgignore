@@ -1,7 +1,0 @@
-syntax: glob
-.project
-.pydevproject
-*.pyc
-.settings/*
-*.egg-info
-.idea
