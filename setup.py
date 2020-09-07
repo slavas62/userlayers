@@ -11,10 +11,9 @@ setup(
         'django-tastypie >= 0.13.0',
         'transliterate == 1.7.3',
         'vectortools == 0.0.6',
-        'shapeutils == 0.0.1',
+        'shapeutils == 1.0.0',
     ],
     dependency_links = [
-#        'https://bitbucket.org/lighter/shape-utils/get/e0b5af9.zip#egg=shapeutils-0.0.1',
-        'https://github.com/slavas62/shape-utils/archive/master.zip#egg=shapeutils-0.0.1',
+        'https://github.com/slavas62/shape-utils/archive/master.zip#egg=shapeutils-1.0.0',
     ],
 )
