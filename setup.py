@@ -14,7 +14,7 @@ setup(
         'shapeutils == 0.0.1',
     ],
     dependency_links = [
-#        'https://bitbucket.org/lighter/shape-utils/get/e0b5af9.zip#egg=shapeutils-0.0.1',
+##        'https://bitbucket.org/lighter/shape-utils/get/e0b5af9.zip#egg=shapeutils-0.0.1',
         'https://bitbucket.org/slavas/shape-utils/get/master.zip#egg=shapeutils-0.0.1',
     ],
 )
