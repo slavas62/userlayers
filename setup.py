@@ -8,9 +8,9 @@ setup(
     install_requires=[
         'django-polymodels == 1.4.1',
         'django-mutant == 0.2',
-        'django-tastypie >= 0.13.0',
+        'django-tastypie >= 0.13.3',
         'transliterate == 1.7.3',
-        'vectortools == 0.0.6',
+        'vectortools == 0.0.7',
         'shapeutils == 0.0.1',
     ],
     dependency_links = [
